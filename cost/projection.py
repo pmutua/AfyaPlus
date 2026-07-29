@@ -10,6 +10,9 @@ import pandas as pd
 from cost.pricing import (
     EXCHANGE_RATE,
     EXCHANGE_RATE_DATE,
+    EXCHANGE_RATE_DOCUMENT,
+    EXCHANGE_RATE_PUBLISHED_ON,
+    EXCHANGE_RATE_SOURCE,
     PRICING_VERIFIED_ON,
     usd_to_kes,
 )
@@ -150,4 +153,7 @@ def build_projection(
     frame["pricing_verified_on"] = PRICING_VERIFIED_ON
     frame["usd_to_kes"] = str(EXCHANGE_RATE)
     frame["exchange_rate_date"] = EXCHANGE_RATE_DATE
+    frame["exchange_rate_published_on"] = EXCHANGE_RATE_PUBLISHED_ON
+    frame["exchange_rate_source"] = EXCHANGE_RATE_SOURCE
+    frame["exchange_rate_document"] = EXCHANGE_RATE_DOCUMENT
     return frame

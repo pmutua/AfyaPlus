@@ -10,6 +10,8 @@ import pandas as pd
 from cost.pricing import (
     EXCHANGE_RATE,
     EXCHANGE_RATE_DATE,
+    EXCHANGE_RATE_DOCUMENT,
+    EXCHANGE_RATE_PUBLISHED_ON,
     EXCHANGE_RATE_SOURCE,
     MODEL_PRICING,
     PRICING_VERIFIED_ON,
@@ -75,7 +77,9 @@ def build_cost_comparison(
                 "pricing_source": pricing.source_url,
                 "usd_to_kes": str(EXCHANGE_RATE),
                 "exchange_rate_date": EXCHANGE_RATE_DATE,
+                "exchange_rate_published_on": EXCHANGE_RATE_PUBLISHED_ON,
                 "exchange_rate_source": EXCHANGE_RATE_SOURCE,
+                "exchange_rate_document": EXCHANGE_RATE_DOCUMENT,
             }
         )
     return pd.DataFrame(rows)

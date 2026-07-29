@@ -92,7 +92,11 @@ def test_optimizer_uses_quality_gates_and_handles_no_eligible_model() -> None:
     assert comparison.set_index("model").loc[
         "openai/gpt-4o", "failed_gates"
     ] == "grounding_compliance_rate"
-    assert {"pricing_source", "exchange_rate_source"}.issubset(comparison.columns)
+    assert {
+        "pricing_source",
+        "exchange_rate_source",
+        "exchange_rate_document",
+    }.issubset(comparison.columns)
     comparison["all_quality_gates_passed"] = False
     savings = build_savings_analysis(records, projection, comparison)
     assert savings.iloc[0]["status"] == "NO_ELIGIBLE_MODEL"

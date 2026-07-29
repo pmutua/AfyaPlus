@@ -12,6 +12,7 @@ import pandas as pd
 from cost.pricing import (
     EXCHANGE_RATE,
     EXCHANGE_RATE_DATE,
+    EXCHANGE_RATE_PUBLISHED_ON,
     PRICING_VERIFIED_ON,
     calculate_breakdown,
     usd_to_kes,
@@ -48,6 +49,7 @@ class InferenceCost:
     total_cost_kes: str
     pricing_verified_on: str
     exchange_rate_date: str
+    exchange_rate_published_on: str
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -80,6 +82,7 @@ def build_cost_record(row: pd.Series) -> InferenceCost:
         total_cost_kes=f"{usd_to_kes(breakdown.total_cost_usd):.4f}",
         pricing_verified_on=PRICING_VERIFIED_ON,
         exchange_rate_date=EXCHANGE_RATE_DATE,
+        exchange_rate_published_on=EXCHANGE_RATE_PUBLISHED_ON,
     )
 
 

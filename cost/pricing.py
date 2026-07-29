@@ -10,8 +10,13 @@ USD_QUANTUM = Decimal("0.00000001")
 KES_QUANTUM = Decimal("0.0001")
 PRICING_VERIFIED_ON = "2026-07-29"
 EXCHANGE_RATE = Decimal("129.5000")
-EXCHANGE_RATE_DATE = "2026-07-29"
+EXCHANGE_RATE_DATE = "2026-07-28"
+EXCHANGE_RATE_PUBLISHED_ON = "2026-07-29"
 EXCHANGE_RATE_SOURCE = "https://www.centralbank.go.ke/forex/"
+EXCHANGE_RATE_DOCUMENT = (
+    "https://www.centralbank.go.ke/uploads/cbk_indicative_rates/"
+    "508352374_Daily%20KES%20Exchange%20Rates.pdf"
+)
 
 
 @dataclass(frozen=True)
