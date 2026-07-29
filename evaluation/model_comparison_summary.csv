@@ -1,0 +1,3 @@
+model,total_questions,successful_questions,failed_questions,bleu_4,rouge_l,token_f1,correctness,groundedness,relevance,helpfulness,overall,latency_ms,prompt_tokens,completion_tokens,all_gates_passed
+openai/gpt-4o,15,15,0,0.6497,0.7204,0.759,4.7333,4.7333,4.8,4.7333,4.7467,1540.118,383.4667,31.0,False
+openai/gpt-4o-mini,15,15,0,0.6553,0.764,0.8029,5.0,5.0,5.0,5.0,5.0,1853.5247,383.4667,37.8667,True

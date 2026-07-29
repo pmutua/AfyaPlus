@@ -24,6 +24,12 @@ qdrant-client
 # LLM / OpenRouter
 openai
 
+# SPEC-7 evaluation
+pandas
+nltk
+rouge-score
+tabulate
+
 # Configuration
 python-dotenv
 

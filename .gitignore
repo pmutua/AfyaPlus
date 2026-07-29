@@ -24,3 +24,6 @@ Thumbs.db
 # Persisted vector store (rebuilt by app.rag.ingestion.build_index())
 storage/
 
+# Paid evaluation calls are resumable locally; evidence CSVs remain reviewable.
+evaluation/.cache/
+
