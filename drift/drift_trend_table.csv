@@ -1,0 +1,16 @@
+month,month_index,column,statistic,p_value,reference_mean,current_mean,mean_change,drift_detected,signal_type,requires_action,first_detected
+Month 1,1,rouge_l,0.045833,0.9525858861,0.737066,0.731028,-0.006038,False,quality,False,False
+Month 1,1,overall,0.058333,0.7866393208,4.65375,4.648125,-0.005625,False,quality,False,False
+Month 1,1,latency_ms,0.116667,0.0702671306,1733.768167,1672.203917,-61.56425,False,operational,False,False
+Month 1,1,total_tokens,0.05,0.9102636949,420.258333,418.8125,-1.445833,False,operational,False,False
+Month 1,1,grounding_compliance,0.016667,1.0,0.970833,0.9875,0.016667,False,quality,False,False
+Month 2,2,rouge_l,0.070833,0.5594759204,0.737066,0.73176,-0.005305,False,quality,False,False
+Month 2,2,overall,0.070833,0.5594759204,4.65375,4.60525,-0.0485,False,quality,False,False
+Month 2,2,latency_ms,0.5875,0.0,1733.768167,2297.350208,563.582042,True,operational,False,True
+Month 2,2,total_tokens,1.0,0.0,420.258333,523.666667,103.408333,True,operational,False,True
+Month 2,2,grounding_compliance,0.004167,1.0,0.970833,0.966667,-0.004167,False,quality,False,False
+Month 3,3,rouge_l,0.25,4.283e-07,0.737066,0.62607,-0.110996,True,quality,True,True
+Month 3,3,overall,0.466667,0.0,4.65375,4.059083,-0.594667,True,quality,True,True
+Month 3,3,latency_ms,0.725,0.0,1733.768167,2456.85125,723.083083,True,operational,False,False
+Month 3,3,total_tokens,1.0,0.0,420.258333,565.175,144.916667,True,operational,False,False
+Month 3,3,grounding_compliance,0.2,0.0001104713,0.970833,0.770833,-0.2,True,quality,True,True

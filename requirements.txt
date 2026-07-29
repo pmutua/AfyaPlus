@@ -30,6 +30,10 @@ nltk
 rouge-score
 tabulate
 
+# SPEC-7 drift detection and HTML reports
+scipy
+evidently==0.7.21
+
 # Configuration
 python-dotenv
 
