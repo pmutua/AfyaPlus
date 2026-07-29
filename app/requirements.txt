@@ -1,0 +1,16 @@
+llama-index
+langchain
+langchain-core
+langgraph
+langchain-openai
+pypdf
+chainlit>=2.11.0,<3.0.0
+tomli==2.2.1
+fastapi
+pydantic
+uvicorn[standard]
+qdrant-client
+openai
+python-dotenv
+httpx
+prometheus-client

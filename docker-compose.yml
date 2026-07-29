@@ -1,0 +1,84 @@
+name: afyaplus-observability
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    environment:
+      MODEL_PROVIDER: ollama_cloud
+      OLLAMA_CLOUD_BASE_URL: https://ollama.com/v1
+      OLLAMA_CLOUD_MODEL: ${OLLAMA_CLOUD_MODEL:?set OLLAMA_CLOUD_MODEL}
+      OLLAMA_CLOUD_API_KEY: ${OLLAMA_CLOUD_API_KEY:?set OLLAMA_CLOUD_API_KEY}
+      CLOUD_TIMEOUT_SECONDS: ${CLOUD_TIMEOUT_SECONDS:-30.0}
+      QDRANT_URL: ${QDRANT_URL:?set QDRANT_URL}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:?set QDRANT_API_KEY}
+      QDRANT_COLLECTION_NAME: ${QDRANT_COLLECTION_NAME:-afyaplus_knowledge_base}
+      QDRANT_EMBEDDING_MODEL: ${QDRANT_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      QDRANT_EMBEDDING_DIMENSIONS: ${QDRANT_EMBEDDING_DIMENSIONS:-384}
+      QDRANT_TIMEOUT_SECONDS: ${QDRANT_TIMEOUT_SECONDS:-30.0}
+      AGENT_HISTORY_TOKEN_BUDGET: ${AGENT_HISTORY_TOKEN_BUDGET:-2048}
+      CHAINLIT_COT_MODE: ${CHAINLIT_COT_MODE:-hidden}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_REQUESTS_PER_MINUTE: ${RATE_LIMIT_REQUESTS_PER_MINUTE:-10}
+      RATE_LIMIT_REQUESTS_PER_DAY: ${RATE_LIMIT_REQUESTS_PER_DAY:-100}
+      RATE_LIMIT_TRUST_RAILWAY_PROXY: "false"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    environment:
+      DASHBOARD_ACCESS_TOKEN: ${DASHBOARD_ACCESS_TOKEN:?set DASHBOARD_ACCESS_TOKEN}
+      DASHBOARD_ARTIFACT_ROOT: /app
+      AFYAPLUS_HEALTH_URL: http://api:8000/health
+      DASHBOARD_HEALTH_TIMEOUT_SECONDS: ${DASHBOARD_HEALTH_TIMEOUT_SECONDS:-3}
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/metrics')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      api:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v3.12.0
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./dashboard/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      dashboard:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:13.1.0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./dashboard/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./dashboard/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_started

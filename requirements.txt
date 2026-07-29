@@ -34,6 +34,10 @@ tabulate
 scipy
 evidently==0.7.21
 
+# SPEC-7 executive dashboard
+jinja2
+prometheus-client
+
 # Configuration
 python-dotenv
 

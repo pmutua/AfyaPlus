@@ -90,6 +90,14 @@ def test_chat_masks_model_input_and_demasks_final_response() -> None:
         assert raw_pii not in model_input
     for token in MASKED_TOKENS:
         assert token in model_input
+    metrics = client.get("/metrics")
+    assert metrics.status_code == 200
+    assert (
+        'afyaplus_api_http_requests_total{method="POST",route="/chat",'
+        'status_class="2xx"} 1.0'
+    ) in metrics.text
+    for raw_pii in RAW_PII:
+        assert raw_pii not in metrics.text
 
 
 def test_chat_rejects_invalid_thread_id() -> None:
