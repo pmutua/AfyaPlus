@@ -306,19 +306,36 @@ messages.
   direct consequence of this, not an independent choice.
 
 **Access control**
-- The service has no authentication or authorization anywhere in the
-  codebase (verified by grep, not assumed). Rate limiting is the only abuse
-  control, scoped to IP (API) or browser session (UI) - never tied to a
-  real user identity.
-- No role-based access - anyone reaching the URL has identical capability.
+- Partially closed for the observability surface: the SPEC-7.4 dashboard
+  (`dashboard/`) requires a shared `DASHBOARD_ACCESS_TOKEN` on every route
+  except `/metrics`, which stays open only for the private Prometheus scrape
+  network. This is a shared secret, not per-user identity or roles.
+- The rest of the system still has no authentication or authorization
+  anywhere in the codebase (verified by grep, not assumed) - `/chat` and
+  `/ui` remain open to anyone reaching the URL. Rate limiting is the only
+  abuse control there, scoped to IP (API) or browser session (UI) - never
+  tied to a real user identity.
+- No role-based access anywhere - within each surface, every caller that
+  clears its one gate (rate limit, or the dashboard token) has identical
+  capability.
 
 **Observability**
-- Logs are stdout-only (read via `railway logs`), with no aggregation,
-  retention policy, search, or alerting. Every production issue found
-  during development (free-tier throttling, retrieval context-overload) was
-  caught by manual live testing, not by any automated signal.
-- No metrics or dashboards for latency, error rate, or retrieval quality
-  over time.
+- Partially closed for the live API: `app/observability.py` now exports
+  bounded-label (`method`, `route`, `status_class` - no user content, no
+  IDs) request-count, duration, and in-progress metrics at `/metrics`, and
+  the Grafana "AfyaPlus Executive Observability" dashboard
+  (`dashboard/grafana/`) charts real Chat API request rate, p95 latency, and
+  error rate over time from that data, alongside the SPEC-7.1-7.3 evaluation
+  quality/drift/cost panels.
+- Still open: no per-request retrieval-quality signal is captured in
+  production - quality tracking remains simulation/evaluation-only (offline
+  `evaluation/`/`drift/` runs), not a live measurement of what real users
+  actually received. Logs are still stdout-only (read via `railway logs`),
+  with no aggregation, retention policy, search, or alerting - the Grafana
+  panels cover metrics, not logs. Every production issue found during
+  development (free-tier throttling, retrieval context-overload) was caught
+  by manual live testing, not by any automated signal, and that remains true
+  today.
 
 **Compliance**
 - Masking as implemented is a mechanism, not full Kenya Data Protection Act

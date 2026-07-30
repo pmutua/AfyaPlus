@@ -71,10 +71,22 @@ tests/                   # Automated test suite
 triage/                  # Foundational Week 1 triage engine
   env.example            # Triage's own configuration template
 triage_cli.py             # Foundational triage CLI entrypoint
+evaluation/               # SPEC-7.1 clinical model comparison pipeline
+drift/                    # SPEC-7.2 statistical drift monitoring
+cost/                     # SPEC-7.3 token cost/efficiency analysis
+dashboard/                # SPEC-7.4 authenticated executive dashboard + Grafana
+scripts/                  # Provider verification and executive-brief rendering
+executive_summary.md      # SPEC-7.5 evidence-backed leadership brief (source)
+executive_summary.pdf     # SPEC-7.5 rendered one-page leadership brief
+docker-compose.yml        # Chat API + dashboard + Prometheus + Grafana stack
 .env.example             # RAG Agent System configuration template
 requirements.txt         # Python dependencies
 .chainlit/config.toml    # Safe UI branding and feature settings
 ```
+
+See "Executive Observability Dashboard (SPEC-7)" below for what the
+`evaluation/`, `drift/`, `cost/`, and `dashboard/` packages do and how to run
+each phase.
 
 The Qdrant collection is created and populated lazily on the first knowledge
 query. Once non-empty, it is reused across restarts. Rebuild into a new
@@ -370,6 +382,57 @@ for the required variables, initial deployment, verification, and rollback
 procedure. Production must use `MODEL_PROVIDER=ollama_cloud`; it cannot reach a
 developer workstation's local Ollama service.
 
+## Executive Observability Dashboard (SPEC-7)
+
+A cross-cutting capstone that evaluates and monitors the RAG Agent System
+above — not a separate app. It reuses the real
+`app/agent/prompts.py::SYSTEM_PROMPT` and `app/safeguards/masking.py::mask()`,
+and its dashboard probes the real `app/` service's `/health` endpoint.
+
+- `evaluation/` (SPEC-7.1) — clinical model comparison (`openai/gpt-4o-mini`
+  vs. `openai/gpt-4o` via OpenRouter) against a fixed 15-question dataset,
+  lexical metrics, an LLM judge, and clinical quality gates.
+- `drift/` (SPEC-7.2) — deterministic monthly traffic simulation, SciPy K-S
+  drift detection, and Evidently HTML reports.
+- `cost/` (SPEC-7.3) — dated OpenRouter pricing, a 30-day cost projection,
+  budget status, and quality-gated model-routing savings analysis.
+- `dashboard/` (SPEC-7.4) — an authenticated FastAPI executive dashboard
+  (`DASHBOARD_ACCESS_TOKEN` gates every route except `/metrics`) plus a
+  Prometheus/Grafana stack charting live Chat API request rate, p95 latency,
+  and error rate alongside the SPEC-7.1–7.3 quality/drift/cost evidence.
+- `executive_summary.md`/`.pdf` (SPEC-7.5) — a one-page leadership brief
+  citing every numerical claim to its exact source artifact and column.
+
+Run each phase from the repository root (Windows PowerShell):
+
+```powershell
+# SPEC-7.1 - requires a real OPENROUTER_API_KEY in .env, even to replay a
+# full results cache with zero paid calls (evaluation/.cache/results.jsonl).
+.\.venv\Scripts\python.exe -m evaluation.run_evaluation
+
+# SPEC-7.2 - deterministic, no external calls.
+.\.venv\Scripts\python.exe -m drift.run_monthly_drift_reports
+
+# SPEC-7.3 - deterministic, reads SPEC-7.1's evaluation output.
+.\.venv\Scripts\python.exe -m cost.run_cost_analysis
+
+# SPEC-7.4 - the authenticated dashboard alone.
+$env:DASHBOARD_ACCESS_TOKEN="replace-with-at-least-16-characters"
+.\.venv\Scripts\python.exe -m uvicorn dashboard.main:create_app --factory --host 127.0.0.1 --port 8001 --workers 1
+
+# SPEC-7.5 - renders executive_summary.md to executive_summary.pdf via an
+# isolated ReportLab environment; never touches requirements.txt.
+uv run --with reportlab python scripts/render_executive_summary.py
+```
+
+Or bring up the full stack (chat API, dashboard, Prometheus, Grafana) with
+`docker compose up --build` from the repository root — see
+[dashboard/README.md](dashboard/README.md) for ports, required variables, and
+failure-boundary details. Generated CSV/HTML/JSONL artifacts under
+`evaluation/`, `drift/`, and `cost/` are the underlying evidence
+`executive_summary.md` cites; they are reproducible from the commands above,
+not hand-authored.
+
 ## Orchestration and Grounding Decisions
 
 - LangChain provides the agent and typed tool interface; LangGraph provides
@@ -437,7 +500,9 @@ spaces or hyphens require additional controls before real patient use. See the
 
 ## Current Operational Limitations
 
-- No authentication, authorization, or production audit sink.
+- `/chat` and `/ui` have no authentication, authorization, or production
+  audit sink. Only the separate SPEC-7.4 dashboard (`dashboard/`) is gated,
+  by a shared `DASHBOARD_ACCESS_TOKEN`, not per-user identity or roles.
 - Rate limiting is process-local; Chainlit limits are per session and can be
   bypassed by starting another unauthenticated session.
 - The Chainlit UI remains unsuitable for real patient data without
@@ -446,8 +511,10 @@ spaces or hyphens require additional controls before real patient use. See the
 - Health checks report process liveness, not Ollama or Qdrant readiness.
 - Local model quality and latency depend on host hardware.
 - Human review remains required for clinical risk and benefits decisions.
-- Docker and deployment packaging are intentionally deferred until after the
-  course capstone.
+- Docker Compose (`docker-compose.yml`) packages the chat API, dashboard,
+  Prometheus, and Grafana for local/self-hosted use (SPEC-7.4). Production
+  on Railway still deploys via `railway up`/GitHub-triggered builds, not this
+  Compose file.
 
 Do not expose this prototype to untrusted networks or process real patient data
 without production security, privacy, retention, monitoring, and governance

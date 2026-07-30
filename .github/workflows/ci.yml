@@ -45,7 +45,7 @@ jobs:
         run: python -m pytest -q
 
       - name: Compile Python sources
-        run: python -m compileall -q app scripts tests triage triage_cli.py
+        run: python -m compileall -q app scripts tests triage triage_cli.py evaluation drift cost dashboard
 
       - name: Check patch whitespace
         run: git diff --check
