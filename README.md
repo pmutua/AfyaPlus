@@ -48,6 +48,7 @@ Detailed documentation:
 
 - [Architecture](docs/architecture.md)
 - [Deployment guide](docs/deployment.md)
+- [Railway deployment guide (all four SPEC-7.4 services)](docs/railway-deployment.md)
 - [Deployment decision record](docs/deployment-architecture-research.md)
 - [Sequence diagrams](docs/sequence-diagram.md)
 - [Privacy safeguards](docs/privacy.md)
@@ -430,10 +431,13 @@ uv run --with reportlab python scripts/render_executive_summary.py
 Or bring up the full stack (chat API, dashboard, Prometheus, Grafana) with
 `docker compose up --build` from the repository root — see
 [dashboard/README.md](dashboard/README.md) for ports, required variables, and
-failure-boundary details. Generated CSV/HTML/JSONL artifacts under
-`evaluation/`, `drift/`, and `cost/` are the underlying evidence
-`executive_summary.md` cites; they are reproducible from the commands above,
-not hand-authored.
+failure-boundary details. All four services also run in production on
+Railway as separate services (not via this Compose file) — see
+[docs/railway-deployment.md](docs/railway-deployment.md) for the complete
+setup, per-service environment variables, and troubleshooting. Generated
+CSV/HTML/JSONL artifacts under `evaluation/`, `drift/`, and `cost/` are the
+underlying evidence `executive_summary.md` cites; they are reproducible
+from the commands above, not hand-authored.
 
 ## Orchestration and Grounding Decisions
 

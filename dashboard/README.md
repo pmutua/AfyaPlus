@@ -39,6 +39,18 @@ Grafana requires `GRAFANA_ADMIN_USER` (default `admin`) and the required
 Prometheus datasource and AfyaPlus executive dashboard are provisioned from
 the version-controlled files under `dashboard/grafana/`.
 
+## Deploying to Railway instead of Compose
+
+All four services (chat API, dashboard, Prometheus, Grafana) also run in
+production as separate Railway services — Railway does not run
+`docker-compose.yml` directly, so each needs its own build config and
+private-network wiring. See
+[docs/railway-deployment.md](../docs/railway-deployment.md) for the
+complete setup, per-service environment variable tables, the exact deploy
+commands, and a troubleshooting section covering every real issue hit while
+setting this up (path-mangling on Windows, healthcheck/PORT gotchas, and
+more).
+
 ## Architecture and failure boundaries
 
 - Startup fails on missing authentication, malformed URLs, or invalid/missing
@@ -48,7 +60,8 @@ the version-controlled files under `dashboard/grafana/`.
   thread IDs, IP addresses, and patient identifiers are never metric labels.
 - Metrics use one in-process registry per service, so both Python services
   deliberately run one Uvicorn worker.
-- Grafana reads Prometheus through the private Compose service name and keeps
-  its datasource and dashboard read-only/provisioned from Git.
+- Grafana reads Prometheus through a private network name (Compose service
+  name locally, `prometheus.railway.internal` on Railway) and keeps its
+  datasource and dashboard read-only/provisioned from Git.
 - Prometheus should be network-restricted in production because `/metrics`
   exposes aggregate operational evidence without application-layer auth.
