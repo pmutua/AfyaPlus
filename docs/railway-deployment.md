@@ -1,14 +1,17 @@
 # Railway Deployment Guide — Executive Observability Stack
 
-A complete, copy-paste reference for deploying and operating all four
-Railway services this project runs: the chat API, the executive dashboard,
-Prometheus, and Grafana. Written so a developer new to this repo can deploy
-successfully without rediscovering the platform gotchas documented in
-"Troubleshooting" below the hard way.
+A complete, copy-paste reference for **deploying** all four Railway services
+this project runs: the chat API, the executive dashboard, Prometheus, and
+Grafana. Written so a developer new to this repo can deploy successfully
+without rediscovering the platform gotchas documented in "Troubleshooting"
+below the hard way.
 
 For the chat API's own Qdrant/Ollama Cloud configuration and general
 production checklist, see [deployment.md](deployment.md) — this document
-covers the four-service Railway setup specifically (SPEC-7.4).
+covers the four-service Railway setup specifically (SPEC-7.4). For
+day-to-day **operation** after deployment (routine checks, what Grafana
+panels mean, incident response), see
+[operations-runbook.md](operations-runbook.md) instead.
 
 ## 1. What's deployed
 

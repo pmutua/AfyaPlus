@@ -49,7 +49,11 @@ private-network wiring. See
 complete setup, per-service environment variable tables, the exact deploy
 commands, and a troubleshooting section covering every real issue hit while
 setting this up (path-mangling on Windows, healthcheck/PORT gotchas, and
-more).
+more). Once deployed, see
+[docs/operations-runbook.md](../docs/operations-runbook.md) for what each
+Grafana panel means and how to respond when one goes red — including the
+important caveat that the quality/drift/cost/budget panels are snapshots
+from the dashboard's last deploy, not live-refreshed.
 
 ## Architecture and failure boundaries
 

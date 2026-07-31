@@ -49,6 +49,7 @@ Detailed documentation:
 - [Architecture](docs/architecture.md)
 - [Deployment guide](docs/deployment.md)
 - [Railway deployment guide (all four SPEC-7.4 services)](docs/railway-deployment.md)
+- [Operations runbook (daily checks, Grafana panels, incident response)](docs/operations-runbook.md)
 - [Deployment decision record](docs/deployment-architecture-research.md)
 - [Sequence diagrams](docs/sequence-diagram.md)
 - [Privacy safeguards](docs/privacy.md)
