@@ -25,7 +25,7 @@
 </head>
 <body>
 <main>
-  <a class="back" href="/{{ '?access_token=' + token if token else '' }}">&larr; Back to dashboard</a>
+  <a class="back" href="/">&larr; Back to dashboard</a>
   <header>
     <div class="eyebrow">Source evidence</div>
     <h1>Evidence Files</h1>
@@ -38,7 +38,7 @@
       <tbody>
       {% for entry in artifacts %}
         <tr>
-          <td><a href="/artifacts/{{ entry.relative_path }}{{ '?access_token=' + token if token else '' }}">{{ entry.relative_path }}</a></td>
+          <td><a href="/artifacts/{{ entry.relative_path }}">{{ entry.relative_path }}</a></td>
           <td>{{ "%.1f"|format(entry.size_bytes / 1024) }} KB</td>
         </tr>
       {% endfor %}

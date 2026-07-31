@@ -100,6 +100,70 @@ def test_failed_health_probe_degrades_to_unknown() -> None:
     assert probe_health("http://127.0.0.1:1/health", 0.1).status == "UNKNOWN"
 
 
+def test_query_param_auth_bootstraps_an_httponly_session_cookie() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+    response = client.get("/", params={"access_token": TOKEN})
+
+    set_cookie = response.headers.get("set-cookie", "")
+    assert "dashboard_token=" in set_cookie
+    assert "httponly" in set_cookie.lower()
+    assert "samesite=strict" in set_cookie.lower()
+
+
+def test_session_cookie_alone_authenticates_without_token_in_url() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+    client.get("/", params={"access_token": TOKEN})  # bootstraps the cookie
+
+    response = client.get("/artifacts")  # no header, no query param this time
+
+    assert response.status_code == 200
+
+
+def test_header_auth_does_not_leak_token_into_a_cookie() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+    response = client.get("/", headers={"X-Dashboard-Token": TOKEN})
+
+    assert "set-cookie" not in response.headers
+
+
+def test_authenticated_responses_never_leak_a_referer() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+    response = client.get("/", headers={"X-Dashboard-Token": TOKEN})
+
+    assert response.headers["referrer-policy"] == "no-referrer"
+
+
+def test_html_artifacts_are_sandboxed_against_same_origin_script_access() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+    response = client.get(
+        "/artifacts/drift/drift_month_1.html",
+        headers={"X-Dashboard-Token": TOKEN},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-security-policy"] == "sandbox allow-scripts"
+    assert response.headers["x-content-type-options"] == "nosniff"
+
+
+def test_non_html_artifacts_get_nosniff_but_no_sandbox_csp() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+    response = client.get(
+        "/artifacts/cost/cost_projection_30d.csv",
+        headers={"X-Dashboard-Token": TOKEN},
+    )
+
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert "content-security-policy" not in response.headers
+
+
+def test_evidence_links_never_carry_the_token_in_the_url() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+    response = client.get("/artifacts", params={"access_token": TOKEN})
+
+    assert f"access_token={TOKEN}" not in response.text
+    assert 'href="/artifacts/cost/cost_projection_30d.csv"' in response.text
+
+
 def test_metrics_are_public_and_use_dedicated_dashboard_names() -> None:
     client = TestClient(create_app(_settings(), _healthy))
     response = client.get("/metrics")

@@ -28,16 +28,19 @@ from dashboard.metrics import (
 
 HealthProbe = Callable[[str, float], HealthEvidence]
 TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
+_COOKIE_NAME = "dashboard_token"
 
 
-def _request_token(request: Request) -> str:
+def _request_credential(request: Request) -> tuple[str, str]:
+    """Return (value, source): source is "header", "cookie", or "query"."""
+
     header = request.headers.get("X-Dashboard-Token", "")
-    return header or request.query_params.get("access_token", "")
-
-
-def _authorized(request: Request, expected: str) -> bool:
-    supplied = _request_token(request)
-    return bool(supplied) and secrets.compare_digest(supplied, expected)
+    if header:
+        return header, "header"
+    cookie = request.cookies.get(_COOKIE_NAME, "")
+    if cookie:
+        return cookie, "cookie"
+    return request.query_params.get("access_token", ""), "query"
 
 
 def _install_auth(application: FastAPI, access_token: str) -> None:
@@ -45,13 +48,28 @@ def _install_auth(application: FastAPI, access_token: str) -> None:
     async def authenticate(request: Request, call_next: Callable) -> Response:
         if request.url.path == "/metrics":
             return await call_next(request)
-        if not _authorized(request, access_token):
+        supplied, source = _request_credential(request)
+        if not supplied or not secrets.compare_digest(supplied, access_token):
             return JSONResponse(
                 {"detail": "Dashboard authentication required."},
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 headers={"WWW-Authenticate": "Dashboard-Token"},
             )
-        return await call_next(request)
+        response = await call_next(request)
+        response.headers["Referrer-Policy"] = "no-referrer"
+        if source == "query":
+            # Bootstrap a session cookie so the token never has to appear in
+            # another URL for the rest of this browser session - avoids
+            # repeated exposure via access/proxy logs and browser history.
+            response.set_cookie(
+                _COOKIE_NAME,
+                supplied,
+                httponly=True,
+                secure=request.url.scheme == "https",
+                samesite="strict",
+                max_age=3600,
+            )
+        return response
 
 
 def _install_routes(
@@ -86,10 +104,7 @@ def _install_routes(
         return TEMPLATES.TemplateResponse(
             request=request,
             name="artifacts.html",
-            context={
-                "artifacts": list_available_artifacts(settings.artifact_root),
-                "token": request.query_params.get("access_token", ""),
-            },
+            context={"artifacts": list_available_artifacts(settings.artifact_root)},
         )
 
     @application.get("/artifacts/{artifact_path:path}", name="artifact_file")
@@ -103,7 +118,15 @@ def _install_routes(
             for e in list_available_artifacts(settings.artifact_root)
             if e.relative_path == artifact_path
         )
-        return FileResponse(resolved, media_type=entry.media_type)
+        headers = {"X-Content-Type-Options": "nosniff"}
+        if entry.media_type == "text/html":
+            # Same-origin HTML is a stored-XSS surface even for
+            # code-generated (not user-authored) reports: sandbox blocks
+            # cookie/localStorage access, top-level navigation, and popups
+            # from the served page, while still allowing the interactive
+            # charts these reports render with to keep working.
+            headers["Content-Security-Policy"] = "sandbox allow-scripts"
+        return FileResponse(resolved, media_type=entry.media_type, headers=headers)
 
 
 def create_app(
