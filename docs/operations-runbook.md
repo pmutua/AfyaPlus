@@ -13,8 +13,8 @@ services deployed*, not *running them afterward*.
    panel — should read green/`1`.
 2. Check **Chat API Error Rate** — should be green (under 2%).
 3. Check **Chat API p95 Latency** — compare against your own sense of
-   normal; there's no fixed SLA target defined yet (see §6, open item).
-4. If anything is red, jump to §4 (incident response) for that panel.
+   normal; there's no fixed SLA target defined yet (see section 6, open item).
+4. If anything is red, jump to section 4 (incident response) for that panel.
 
 That's it for a routine check. Sections below cover the less-frequent,
 more-involved operational work.
@@ -26,10 +26,10 @@ more-involved operational work.
 | System Health | `afyaplus_upstream_health` | Chat API's real `/health` endpoint, probed live | `1` (green) | — | `0` (red) |
 | Chat API Request Rate | `rate(...http_requests_total{route="/chat"}[5m])` | Traffic volume | Informational, no threshold | — | — |
 | Chat API p95 Latency | `histogram_quantile(0.95, ...duration_seconds...)` | 95th-percentile response time | Informational, no fixed threshold set | — | — |
-| Chat API Error Rate | 4xx+5xx ÷ total `/chat` requests, 5m window | Live error rate | < 2% (green) | 2-5% (orange) | ≥ 5% (red) |
-| Feature Quality Matrix | `afyaplus_feature_quality_score{metric="overall"}` | Last evaluation run's overall score, 1-5 scale (5 = best) | ≥ 4.0 (matches the SPEC-7.1 gate threshold) | — | < 4.0 |
+| Chat API Error Rate | 4xx and 5xx requests as a share of total `/chat` requests, 5-minute window | Live error rate | under 2% (green) | 2-5% (orange) | 5% or more (red) |
+| Feature Quality Matrix | `afyaplus_feature_quality_score{metric="overall"}` | Last evaluation run's overall score, 1-5 scale (5 = best) | 4.0 or higher (matches the SPEC-7.1 gate threshold) | — | below 4.0 |
 | Drift Vector Status | `afyaplus_drift_detected`, `afyaplus_drift_action_required` | Whether the last drift simulation flagged a column | `0` (green) | — | `1` (red) |
-| Budget Capital Utilisation | `afyaplus_budget_utilization_ratio` | Last cost projection's % of the daily budget cap | < 80% (green) | 80-95% (orange) | ≥ 95% (red) |
+| Budget Capital Utilisation | `afyaplus_budget_utilization_ratio` | Last cost projection's % of the daily budget cap | under 80% (green) | 80-95% (orange) | 95% or more (red) |
 | Projected 30-Day Cost | `afyaplus_projected_30d_cost_usd` | Last cost projection's raw USD figure | Informational, no fixed threshold | — | — |
 
 **Critical caveat, read before trusting any of the bottom five rows**: the
@@ -46,7 +46,7 @@ nobody opens the dashboard for a while, System Health also goes stale at
 its last-known value).
 
 To get fresh numbers into these four panels, you must re-run the relevant
-pipeline **and** redeploy the `dashboard` service (see §3) — there is no
+pipeline **and** redeploy the `dashboard` service (see section 3) — there is no
 way to refresh them without a redeploy.
 
 ## 3. Re-running the evaluation / drift / cost pipelines
@@ -97,7 +97,7 @@ railway up --service dashboard --detach
 railway redeploy --service dashboard --yes
 ```
 
-See [railway-deployment.md §5](railway-deployment.md#5-the-deploy-recipe)
+See [railway-deployment.md section 5](railway-deployment.md#5-the-deploy-recipe)
 if this fails on the first `up` — that's expected, the `redeploy` after it
 is what actually applies the change.
 
@@ -106,8 +106,8 @@ is what actually applies the change.
 | Symptom | Likely cause | What to do |
 |---|---|---|
 | System Health panel red | Chat API down, or its `/health` route unreachable from the dashboard's private network | `railway logs --service afyaplus-rag-agent --latest --lines 50`; check for a crash or a bad env var. Redeploy if it crashed on a bad config change. |
-| Chat API Error Rate red | A dependency (Ollama Cloud or Qdrant) is failing, or a bad deploy went out | Check `railway logs --service afyaplus-rag-agent --latest` for the actual exception category (never raw exception details reach the client, but logs have it). Roll back via Railway's deployment history if a recent deploy caused it — see [deployment.md §Rollback](deployment.md#rollback). |
-| Budget Capital Utilisation red (≥95%) | The last cost projection is close to/over the daily cap | This is a **projection**, not live billing — check the real provider console (OpenRouter) for actual spend before panicking. If real spend is genuinely high, see `cost/structural_savings_analysis.csv` for the quality-gated cheaper-model routing recommendation already computed. |
+| Chat API Error Rate red | A dependency (Ollama Cloud or Qdrant) is failing, or a bad deploy went out | Check `railway logs --service afyaplus-rag-agent --latest` for the actual exception category (never raw exception details reach the client, but logs have it). Roll back via Railway's deployment history if a recent deploy caused it — see [deployment.md Rollback section](deployment.md#rollback). |
+| Budget Capital Utilisation red (95% or more) | The last cost projection is close to/over the daily cap | This is a **projection**, not live billing — check the real provider console (OpenRouter) for actual spend before panicking. If real spend is genuinely high, see `cost/structural_savings_analysis.csv` for the quality-gated cheaper-model routing recommendation already computed. |
 | Drift Vector Status red | The last drift simulation flagged a column as drifted | This is **simulated**, not live traffic — it does not mean production quality has actually degraded. Treat it as a prompt to re-run `evaluation/` against current conditions and see if real quality gates still pass, not as a live incident. |
 | Feature Quality Matrix below 4.0 | The last evaluation run's overall score dropped | Check `evaluation/quality_gate_log.csv` for which specific gate(s) failed. If a prompt/knowledge-base change caused it, that change should not go to production until gates pass again. |
 | Prometheus target down (visible in Grafana's own "Data source" health, or a panel showing "No data") | The `afyaplus-rag-agent` or `dashboard` service is down, or its `/metrics` route is failing | Check the target service directly first (`railway logs --service <name> --latest`). Prometheus itself rarely needs restarting — check what it's *trying* to scrape before assuming Prometheus is broken. |
@@ -131,7 +131,7 @@ an accidental print during a Railway config inspection.
    - **`QDRANT_API_KEY`**: Qdrant Cloud console, for the specific cluster.
    - **`DASHBOARD_ACCESS_TOKEN`** / **`GRAFANA_ADMIN_PASSWORD`**: these
      aren't rotated at a provider — just generate a new random string
-     yourself (see [railway-deployment.md §3](railway-deployment.md#3-per-service-environment-variables)
+     yourself (see [railway-deployment.md section 3](railway-deployment.md#3-per-service-environment-variables)
      for the PowerShell one-liner).
 2. Set the new value on the relevant Railway service:
    ```powershell
@@ -151,11 +151,11 @@ an accidental print during a Railway config inspection.
 
 - No alerting is configured — Grafana's thresholds are visual only (a red
   panel), nothing pages anyone. Checking the dashboard is currently a
-  manual, human action (§1), not an automated one.
+  manual, human action (section 1), not an automated one.
 - No fixed p95 latency SLA/threshold is defined for the Chat API Request
   Rate/Latency panels — they're informational only today.
 - No scheduled/automatic re-run of `evaluation/`, `drift/`, or `cost/` —
-  everything in §3 is manually triggered.
+  everything in section 3 is manually triggered.
 - No log aggregation — `railway logs` against each service individually is
   the only way to see application logs; there's no centralized search
   across all four services.

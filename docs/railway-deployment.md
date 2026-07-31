@@ -105,7 +105,7 @@ truth for this service's variables.
 `PORT` here is not Railway's usual dynamic-assignment variable — it's set
 explicitly because `dashboard/Dockerfile`'s `CMD` hardcodes `--port 8000`
 rather than reading `$PORT`, and Railway needs to know that to health-check
-correctly (see [Troubleshooting §3](#3-healthcheck-fails-with-service-unavailable-even-though-the-app-runs-fine)).
+correctly (see [Troubleshooting, item 3](#3-healthcheck-fails-with-service-unavailable-even-though-the-app-runs-fine)).
 
 Generate the token safely (never type a real secret into a shared/loggable
 shell history if you can avoid it):
@@ -152,14 +152,14 @@ railway variable set "PORT=3000" --service grafana --skip-deploys
 
 **Windows Git Bash users**: never set a variable whose value starts with a
 single `/` (e.g. `/app`) from Git Bash without a `MSYS_NO_PATHCONV=1`
-prefix — see [Troubleshooting §1](#1-a-path-like-variable-silently-gets-mangled-git-bash-only).
+prefix — see [Troubleshooting, item 1](#1-a-path-like-variable-silently-gets-mangled-git-bash-only).
 PowerShell does not have this problem.
 
 ## 4. Build configuration (one-time per service)
 
 Each service needs to know which Dockerfile to build and where its
 config-as-code file lives. **This cannot currently be set reliably from the
-CLI** (see [Troubleshooting §5](#5-cli-config-edits-silently-do-nothing));
+CLI** (see [Troubleshooting, item 5](#5-cli-config-edits-silently-do-nothing));
 do it once in the Railway dashboard:
 
 1. Open the service (`railway.app` → `afyaplus` project → the service tile).
@@ -179,7 +179,7 @@ do it once in the Railway dashboard:
 ### If you need to change a scrape target or provisioned dashboard
 
 - **Prometheus scrape targets**: edit `dashboard/railway/prometheus.yml`
-  (targets list at the bottom), then redeploy (§5). This file is *only*
+  (targets list at the bottom), then redeploy (section 5). This file is *only*
   used for the Railway build — local Compose uses the separate
   `dashboard/prometheus.yml`, which points at Compose service names
   instead of `*.railway.internal` domains. Keep both in sync if you change
@@ -205,12 +205,12 @@ railway redeploy --service <name> --yes
 Why both: `railway up` uploads your current code and starts a build, but it
 resolves *build* settings (which Dockerfile, which builder) using Railway's
 bare-root convention (`/railway.json` at the true repo root) — **not** the
-per-service Config File path from §4 — regardless of what that field says.
+per-service Config File path from section 4 — regardless of what that field says.
 `railway redeploy` re-triggers activation using the service's *actual*
 stored settings, which correctly reads the per-service Config File. The
 first `up` will very likely fail or build the wrong thing; that's expected.
 The `redeploy` immediately after is what actually fixes it. See
-[Troubleshooting §4](#4-a-fresh-railway-up-builds-the-wrong-thing-uses-the-wrong-dockerfile)
+[Troubleshooting, item 4](#4-a-fresh-railway-up-builds-the-wrong-thing-uses-the-wrong-dockerfile)
 for the full explanation if you want to verify this yourself.
 
 For `afyaplus-rag-agent`, a plain `railway up --service afyaplus-rag-agent
@@ -303,12 +303,12 @@ has no way to know which port to check unless told explicitly.
 
 **Fix**: set a plain `PORT` variable on the service matching its actual
 hardcoded port (`8000` for dashboard, `9090` for prometheus, `3000` for
-grafana — see §3's tables). This is a real service variable, set with
+grafana — see section 3's tables). This is a real service variable, set with
 `railway variable set`, not something in the config-as-code file.
 
 ### 4. A fresh `railway up` builds the wrong thing / uses the wrong Dockerfile
 
-**Symptom**: you've correctly set a service's Railway Config File (§4) to
+**Symptom**: you've correctly set a service's Railway Config File (section 4) to
 point at its own `*.railway.json`, but `railway up --service <name>`
 still shows `builder: RAILPACK` in its deployment manifest, or builds using
 a completely unrelated Dockerfile (in the worst case, an entirely different
@@ -323,7 +323,7 @@ that bare root (as `afyaplus-rag-agent`'s originally did, before this repo
 moved it to `app/railway.json` specifically to stop this), every other
 service's `up` silently inherits it.
 
-**Fix**: this is why §5's two-command recipe exists. `railway redeploy`
+**Fix**: this is why section 5's two-command recipe exists. `railway redeploy`
 (not `up`) is the command that correctly re-resolves each service's own
 Config File. Run `up` to push code, then always follow with `redeploy`
 before trusting the result. Don't rely on `up`'s own reported status alone.
@@ -344,7 +344,7 @@ services, for both build-config and variable dot-paths.
 - For environment **variables**: use `railway variable set "KEY=value"
   --service <name>` (reliable, confirmed working throughout this setup).
 - For **build/deploy config** (Dockerfile path, start command, healthcheck):
-  use a config-as-code JSON file (§4) plus the Railway Config File field,
+  use a config-as-code JSON file (section 4) plus the Railway Config File field,
   set once via the dashboard UI.
 
 ### 6. `railway environment config --json` prints real secrets
@@ -378,7 +378,7 @@ transcript, treat those specific keys as compromised and rotate them.
 
 ### 7. `railway login` doesn't fix an "Unauthorized" MCP tool
 
-Covered in §2 — CLI auth and any Claude Code Railway MCP connection are
+Covered in section 2 — CLI auth and any Claude Code Railway MCP connection are
 separate sessions. Reconnect the MCP server itself (`/mcp` inside Claude
 Code) rather than re-running `railway login` in a terminal.
 
@@ -394,7 +394,7 @@ For local development, skip Railway entirely and use Docker Compose — it
 mirrors the same four services but wires them together with Compose's own
 DNS (`api`, `dashboard`, `prometheus`) instead of Railway's
 `*.railway.internal`, so **the two setups use genuinely different config
-files** (§4 above lists which files are Railway-only).
+files** (section 4 above lists which files are Railway-only).
 
 ```powershell
 $env:DASHBOARD_ACCESS_TOKEN = "any-string-16-chars-or-more"
@@ -430,7 +430,7 @@ railway link -p a5fe5fb0-c562-455d-be97-99e4cf8fad9e -e f79ffd06-29d3-47d8-81ca-
 railway status
 railway deployment list --service <name> --json
 
-# Set a variable (never for path-like values in Git Bash without the prefix — see §6.1)
+# Set a variable (never for path-like values in Git Bash without the prefix — see Troubleshooting, item 1)
 railway variable set "KEY=value" --service <name> --skip-deploys
 
 # List variable names only, without values (safe to run/share)
