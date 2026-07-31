@@ -11,8 +11,9 @@ RUN python -m pip install --no-cache-dir -r /app/dashboard/requirements.txt
 
 COPY dashboard /app/dashboard
 COPY evaluation/*.csv /app/evaluation/
-COPY drift/drift_trend_table.csv /app/drift/drift_trend_table.csv
+COPY drift/drift_trend_table.csv drift/drift_alert_log.jsonl drift/*.html /app/drift/
 COPY cost/*.csv /app/cost/
+COPY executive_summary.md executive_summary.pdf /app/
 
 EXPOSE 8000
 

@@ -6,11 +6,16 @@ import secrets
 from collections.abc import Callable
 from pathlib import Path
 
-from fastapi import FastAPI, Request, Response, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from dashboard.artifacts import (
+    ArtifactNotAvailableError,
+    list_available_artifacts,
+    resolve_artifact_path,
+)
 from dashboard.config import DashboardSettings, load_settings
 from dashboard.data_sources import DashboardData, load_dashboard_data
 from dashboard.health import HealthEvidence, probe_health
@@ -75,6 +80,30 @@ def _install_routes(
             generate_latest(metrics.registry),
             media_type=CONTENT_TYPE_LATEST,
         )
+
+    @application.get("/artifacts", name="artifacts")
+    def artifacts_index(request: Request) -> Response:
+        return TEMPLATES.TemplateResponse(
+            request=request,
+            name="artifacts.html",
+            context={
+                "artifacts": list_available_artifacts(settings.artifact_root),
+                "token": request.query_params.get("access_token", ""),
+            },
+        )
+
+    @application.get("/artifacts/{artifact_path:path}", name="artifact_file")
+    def artifact_file(artifact_path: str) -> Response:
+        try:
+            resolved = resolve_artifact_path(settings.artifact_root, artifact_path)
+        except ArtifactNotAvailableError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        entry = next(
+            e
+            for e in list_available_artifacts(settings.artifact_root)
+            if e.relative_path == artifact_path
+        )
+        return FileResponse(resolved, media_type=entry.media_type)
 
 
 def create_app(

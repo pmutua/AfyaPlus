@@ -336,6 +336,26 @@ messages.
   development (free-tier throttling, retrieval context-overload) was caught
   by manual live testing, not by any automated signal, and that remains true
   today.
+- **Evidence artifact storage does not scale past today's small,
+  bounded file set.** `evaluation/`, `drift/`, `cost/` CSVs/HTML/PDF (see
+  `dashboard/artifacts.py`'s allowlist) are baked into the `dashboard`
+  service's Docker image at build time - both the Grafana panel numbers
+  and the `/artifacts` evidence-file viewer only ever show whatever existed
+  at the last `dashboard` deploy. This is fine at the current handful of
+  small files, but breaks down if evaluation runs accumulate historically
+  (rather than being overwritten each run), or if drift/cost start
+  producing per-day rather than per-month artifacts. **Migration path**:
+  move to external object storage (S3-compatible - Cloudflare R2 or AWS S3
+  - or a Railway Volume as a simpler same-platform first step) that the
+  evaluation/drift/cost pipelines write to directly and `dashboard/
+  artifacts.py` reads from at request time instead of the local filesystem.
+  This has a second benefit beyond scale: it would also remove the
+  "redeploy the dashboard to see new numbers" friction documented in
+  [operations-runbook.md](operations-runbook.md#3-re-running-the-evaluation--drift--cost-pipelines) -
+  new pipeline output would appear immediately, no rebuild needed. Natural
+  pairing with automating the pipelines themselves (e.g. a GitHub Actions
+  workflow writing straight to that store) rather than running them from a
+  developer's local machine.
 
 **Compliance**
 - Masking as implemented is a mechanism, not full Kenya Data Protection Act

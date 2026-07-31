@@ -7,6 +7,11 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
+from dashboard.artifacts import (
+    ArtifactNotAvailableError,
+    list_available_artifacts,
+    resolve_artifact_path,
+)
 from dashboard.config import (
     DashboardConfigurationError,
     DashboardSettings,
@@ -123,6 +128,89 @@ def test_compose_contains_api_dashboard_prometheus_and_grafana() -> None:
     assert "grafana/grafana:13.1.0" in compose
     assert "GRAFANA_ADMIN_PASSWORD:?" in compose
     assert "--workers\", \"1" in dockerfile
+
+
+def test_list_available_artifacts_finds_only_real_allowlisted_files() -> None:
+    entries = list_available_artifacts(ROOT)
+
+    paths = {entry.relative_path for entry in entries}
+    assert "evaluation/model_comparison_summary.csv" in paths
+    assert "drift/drift_month_1.html" in paths
+    assert "executive_summary.pdf" in paths
+    assert all(entry.size_bytes > 0 for entry in entries)
+
+
+def test_resolve_artifact_path_rejects_non_allowlisted_files(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text("not evidence", encoding="utf-8")
+
+    with pytest.raises(ArtifactNotAvailableError, match="Not an evidence artifact"):
+        resolve_artifact_path(tmp_path, "requirements.txt")
+
+
+def test_resolve_artifact_path_rejects_path_traversal(tmp_path: Path) -> None:
+    secret = tmp_path.parent / "secret.txt"
+    secret.write_text("do not serve", encoding="utf-8")
+
+    with pytest.raises(ArtifactNotAvailableError, match="Not an evidence artifact"):
+        resolve_artifact_path(tmp_path, "../secret.txt")
+
+
+def test_resolve_artifact_path_rejects_allowlisted_but_missing_file(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ArtifactNotAvailableError, match="not generated yet"):
+        resolve_artifact_path(tmp_path, "evaluation/model_comparison_summary.csv")
+
+
+def test_resolve_artifact_path_returns_real_path_for_valid_request() -> None:
+    resolved = resolve_artifact_path(ROOT, "cost/cost_projection_30d.csv")
+
+    assert resolved == (ROOT / "cost" / "cost_projection_30d.csv").resolve()
+
+
+def test_artifacts_index_requires_auth() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+
+    assert client.get("/artifacts").status_code == 401
+
+
+def test_artifacts_index_lists_real_files_with_correct_token() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+    response = client.get("/artifacts", headers={"X-Dashboard-Token": TOKEN})
+
+    assert response.status_code == 200
+    assert "evaluation/model_comparison_summary.csv" in response.text
+    assert "executive_summary.pdf" in response.text
+
+
+def test_artifact_file_requires_auth() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+
+    response = client.get("/artifacts/cost/cost_projection_30d.csv")
+
+    assert response.status_code == 401
+
+
+def test_artifact_file_serves_allowlisted_content_with_correct_token() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+    response = client.get(
+        "/artifacts/cost/cost_projection_30d.csv",
+        headers={"X-Dashboard-Token": TOKEN},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "projected_cost_usd" in response.text
+
+
+def test_artifact_file_rejects_non_allowlisted_path_even_with_valid_token() -> None:
+    client = TestClient(create_app(_settings(), _healthy))
+    response = client.get(
+        "/artifacts/dashboard/config.py",
+        headers={"X-Dashboard-Token": TOKEN},
+    )
+
+    assert response.status_code == 404
 
 
 def test_grafana_provisions_prometheus_and_executive_panels() -> None:
