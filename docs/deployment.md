@@ -111,7 +111,7 @@ one passes retrieval tests.
 
 ## Railway Production Deployment
 
-The repository's `railway.json` selects Railpack, starts one Uvicorn worker on
+The repository's `app/railway.json` selects Railpack, starts one Uvicorn worker on
 Railway's injected `PORT`, gates activation on `/health`, and restarts failed
 processes up to five times. `.python-version` keeps Railway and CI on Python
 3.12, avoiding accidental runtime changes when Railpack defaults advance.
@@ -138,7 +138,7 @@ key set. Configure these non-secret values in Railway:
 
 Set `OLLAMA_CLOUD_MODEL`, `OLLAMA_CLOUD_API_KEY`, `QDRANT_URL`, and
 `QDRANT_API_KEY` as Railway variables from an approved secret source. Never
-copy their values into GitHub workflow files, `railway.json`, documentation,
+copy their values into GitHub workflow files, `app/railway.json`, documentation,
 or logs.
 
 The effective start command is:

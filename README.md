@@ -372,10 +372,12 @@ model-boundary assertions. They do not require real patient information.
 ## CI/CD and Railway Production
 
 GitHub Actions runs dependency, test, compilation, and whitespace checks for
-pull requests and pushes to `main` or `feat-rag-agent-system`. Production uses
-Railway's GitHub deployment trigger with **Wait for CI** enabled, so a failed
-workflow skips the associated deployment. Runtime settings are versioned in
-`railway.json`; secrets remain in Railway variables.
+pull requests and pushes to `main` or `feat-rag-agent-system`. Production has
+no GitHub source connected — every deploy is a manual `railway up`, so CI
+passing is not currently a deploy gate. Runtime settings for the chat API are versioned in
+`app/railway.json`; the `dashboard`, `prometheus`, and `grafana` services
+each have their own config-as-code file under `dashboard/railway/`.
+Secrets remain in Railway variables.
 
 See the [deployment guide](docs/deployment.md#railway-production-deployment)
 for the required variables, initial deployment, verification, and rollback
@@ -513,8 +515,11 @@ spaces or hyphens require additional controls before real patient use. See the
 - Human review remains required for clinical risk and benefits decisions.
 - Docker Compose (`docker-compose.yml`) packages the chat API, dashboard,
   Prometheus, and Grafana for local/self-hosted use (SPEC-7.4). Production
-  on Railway still deploys via `railway up`/GitHub-triggered builds, not this
-  Compose file.
+  on Railway runs the same four services as separate Railway services
+  (config-as-code under `app/railway.json` and `dashboard/railway/`), not
+  this Compose file directly.
+- No GitHub source is connected to any Railway service; every deploy is a
+  manual `railway up`, so a passing CI run is not currently a deploy gate.
 
 Do not expose this prototype to untrusted networks or process real patient data
 without production security, privacy, retention, monitoring, and governance
