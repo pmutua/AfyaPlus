@@ -381,9 +381,13 @@ each have their own config-as-code file under `dashboard/railway/`.
 Secrets remain in Railway variables.
 
 See the [deployment guide](docs/deployment.md#railway-production-deployment)
-for the required variables, initial deployment, verification, and rollback
-procedure. Production must use `MODEL_PROVIDER=ollama_cloud`; it cannot reach a
-developer workstation's local Ollama service.
+for this service's required variables, initial deployment, verification, and
+rollback procedure. Production must use `MODEL_PROVIDER=ollama_cloud`; it
+cannot reach a developer workstation's local Ollama service. For the other
+three Railway services (dashboard, Prometheus, Grafana), see the
+[Railway deployment guide](docs/railway-deployment.md) instead — it covers
+all four services' setup, environment variables, and deploy commands in one
+place.
 
 ## Executive Observability Dashboard (SPEC-7)
 
