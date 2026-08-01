@@ -357,6 +357,37 @@ messages.
   workflow writing straight to that store) rather than running them from a
   developer's local machine.
 
+  **Status: a Railway Storage Bucket (S3-compatible, named `neat-barrel` in
+  the `afyaplus` project) already exists for this, created ahead of the
+  implementation work. Not yet wired up - logged here as the concrete plan
+  for whenever this is picked up, split into two independent phases:**
+  - **Phase 1 (dashboard reads from the bucket)**: add `boto3` to
+    `dashboard/requirements.txt`; wire the bucket's credentials into the
+    `dashboard` service via Railway variable references
+    (`${{neat-barrel.BUCKET}}`, `.ACCESS_KEY_ID`, `.SECRET_ACCESS_KEY`,
+    `.ENDPOINT`, `.REGION`); `dashboard/data_sources.py` fetches CSVs from
+    the bucket instead of local disk for the Grafana panel numbers;
+    `dashboard/artifacts.py`'s `/artifacts/{path}` route redirects to a
+    presigned URL (`s3.presign()`, zero service egress, bucket egress is
+    free) instead of serving the file itself - which also means the
+    `Content-Security-Policy: sandbox` header added for HTML artifacts in
+    `eedb8cd` becomes unnecessary, since Railway would be serving those
+    files directly, not this app's own origin. Drop the `dashboard/
+    Dockerfile` `COPY` lines for `evaluation/`/`drift/`/`cost/` entirely
+    once this lands.
+  - **Phase 2 (pipelines write to the bucket)**: `evaluation/
+    run_evaluation.py`, `drift/run_monthly_drift_reports.py`, and `cost/
+    run_cost_analysis.py` each get an `s3.putObject()` call after
+    generating their CSVs. Combined with Phase 1, this fully closes the
+    "redeploy the dashboard to see new numbers" friction - a pipeline
+    re-run alone would be enough.
+  - **Not scoped yet, a further extension beyond both phases above**:
+    timestamped/historical object keys (e.g. `evaluation/2026-07-31/
+    model_comparison_summary.csv` instead of a fixed filename) so Grafana
+    could chart quality/cost/drift trends over multiple runs instead of
+    only ever showing the latest one - today's dashboard has no history at
+    all, only a single snapshot per pipeline.
+
 **Compliance**
 - Masking as implemented is a mechanism, not full Kenya Data Protection Act
   (2019) compliance - see privacy.md's "Not Currently Masked" section.
