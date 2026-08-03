@@ -17,10 +17,14 @@ panels mean, incident response), see
 
 | Service | Purpose | Public URL | Config file |
 |---|---|---|---|
-| `afyaplus-rag-agent` | Chat API (FastAPI + Chainlit + LangGraph) | Yes | `app/railway.json` |
-| `dashboard` | Executive observability dashboard | Yes (token-gated) | `dashboard/railway.json` |
+| `afyaplus-rag-agent` | Chat API (FastAPI + Chainlit + LangGraph) | [afyaplus-rag-agent-production.up.railway.app](https://afyaplus-rag-agent-production.up.railway.app) | `app/railway.json` |
+| `dashboard` | Executive observability dashboard | [dashboard-production-743b.up.railway.app](https://dashboard-production-743b.up.railway.app) (token-gated — append `?access_token=<token>` once, or send `X-Dashboard-Token`) | `dashboard/railway.json` |
 | `prometheus` | Metrics scraping/storage | No (private only) | `dashboard/railway/prometheus.railway.json` |
-| `grafana` | Metrics visualization | Yes (auth-gated) | `dashboard/railway/grafana.railway.json` |
+| `grafana` | Metrics visualization | [grafana-production-593c.up.railway.app](https://grafana-production-593c.up.railway.app/login) (auth-gated — `admin` / `GRAFANA_ADMIN_PASSWORD`) | `dashboard/railway/grafana.railway.json` |
+
+Domain names are per-deployment (Railway assigns a random suffix); if a
+service is ever recreated, its URL will change — reconfirm with `railway
+status` rather than assuming these stay fixed forever.
 
 All four live in one Railway project (`afyaplus`, `production` environment)
 and talk to each other over Railway's private network

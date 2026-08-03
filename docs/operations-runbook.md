@@ -8,7 +8,8 @@ services deployed*, not *running them afterward*.
 
 ## 1. Quick daily/routine check (5 minutes)
 
-1. Open the Grafana dashboard (`https://<grafana-service>.up.railway.app`,
+1. Open the Grafana dashboard
+   ([grafana-production-593c.up.railway.app](https://grafana-production-593c.up.railway.app/login),
    or `http://localhost:3000` locally) and look at the **System Health**
    panel — should read green/`1`.
 2. Check **Chat API Error Rate** — should be green (under 2%).

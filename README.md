@@ -378,6 +378,19 @@ model-boundary assertions. They do not require real patient information.
 
 ## CI/CD and Railway Production
 
+Live production URLs:
+
+| Service | URL |
+|---|---|
+| Chat API | [afyaplus-rag-agent-production.up.railway.app](https://afyaplus-rag-agent-production.up.railway.app) |
+| Executive dashboard | [dashboard-production-743b.up.railway.app](https://dashboard-production-743b.up.railway.app) (token-gated) |
+| Grafana | [grafana-production-593c.up.railway.app](https://grafana-production-593c.up.railway.app/login) (login-gated) |
+| Prometheus | private-network only, no public URL |
+
+Railway assigns a random suffix per deployment, so these change if a service
+is ever recreated — reconfirm with `railway status` rather than assuming
+they're permanent.
+
 GitHub Actions runs dependency, test, compilation, and whitespace checks for
 every pull request, and for direct pushes to `main`, `feat-rag-agent-system`,
 or `feat-observability-dashboard`. Production has

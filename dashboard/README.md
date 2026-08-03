@@ -72,6 +72,14 @@ the version-controlled files under `dashboard/grafana/`.
 
 ## Deploying to Railway instead of Compose
 
+Live: [dashboard-production-743b.up.railway.app](https://dashboard-production-743b.up.railway.app)
+(token-gated) and [grafana-production-593c.up.railway.app](https://grafana-production-593c.up.railway.app/login)
+(login-gated). The chat API these probe is at
+[afyaplus-rag-agent-production.up.railway.app](https://afyaplus-rag-agent-production.up.railway.app).
+Prometheus has no public URL by design (private-network only). These are
+per-deployment Railway domains, not permanent — reconfirm with `railway
+status` if a service is ever recreated.
+
 All four services (chat API, dashboard, Prometheus, Grafana) also run in
 production as separate Railway services — Railway does not run
 `docker-compose.yml` directly, so each needs its own build config and
