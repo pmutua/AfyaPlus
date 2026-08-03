@@ -328,6 +328,28 @@ messages.
   (`dashboard/grafana/`) charts real Chat API request rate, p95 latency, and
   error rate over time from that data, alongside the SPEC-7.1-7.3 evaluation
   quality/drift/cost panels.
+- **The Chat API metrics only ever see direct REST traffic, never Chainlit
+  UI traffic - discovered live while debugging why Grafana's "Chat API
+  Request Rate" stayed empty during active browser use.** `app/chat.py`'s
+  `run_chat()` genuinely is the one shared function both `POST /chat` and
+  Chainlit's `@cl.on_message` handler call (`app/chainlit_app.py`'s
+  `cl.make_async(run_chat)(...)`) - so grounding, masking, and the agent
+  itself behave identically either way. But `app/observability.py`'s
+  metrics middleware instruments the FastAPI HTTP layer only
+  (`@application.middleware("http")`), and a Chainlit UI message is sent
+  over an already-open WebSocket connection, not as its own new HTTP
+  request - so `route_label()` never sees anything to label `"/chat"` for
+  it. Confirmed directly: sending real messages through `/ui/` moved the
+  `route="/ui"` counters while `route="/chat"` stayed frozen. Practical
+  consequence: the "Chat API Request Rate"/"p95 Latency"/"Error Rate"
+  Grafana panels undercount real usage whenever people use the browser UI
+  rather than the REST API directly - a reader could easily mistake "0
+  chat requests" for "nobody is using this" when the opposite is true.
+  No fix attempted yet; the two lowest-effort options are instrumenting
+  inside `run_chat()` itself (call-site metrics, not HTTP-layer) so both
+  paths are counted identically, or explicitly labeling Chainlit's own
+  requests distinctly rather than folding them into the generic `"/ui"`
+  bucket.
 - Still open: no per-request retrieval-quality signal is captured in
   production - quality tracking remains simulation/evaluation-only (offline
   `evaluation/`/`drift/` runs), not a live measurement of what real users

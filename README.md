@@ -463,6 +463,11 @@ CSV/HTML/JSONL artifacts under `evaluation/`, `drift/`, and `cost/` are the
 underlying evidence `executive_summary.md` cites; they are reproducible
 from the commands above, not hand-authored.
 
+Capstone resources:
+
+- [Presentation deck](AfyaPlus_Executive_Observability_Presentation.pptx)
+- [Published slides](https://docs.google.com/presentation/d/e/2PACX-1vTjE2WcaibU32Qa9ACMNQMWuRcSmj9b0foi4l2X17cyIUwpvKqUvCgoHN7HbdnIWFDRKh9skuNMt9Ul/pub?start=false&loop=false&delayms=3000)
+
 ## Orchestration and Grounding Decisions
 
 - LangChain provides the agent and typed tool interface; LangGraph provides
