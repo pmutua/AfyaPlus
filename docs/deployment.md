@@ -180,8 +180,14 @@ only the chat API's own Qdrant/Ollama Cloud configuration above.
 
 ## CI/CD Pipeline
 
-`.github/workflows/ci.yml` runs for every pull request and for pushes to
-`main` and `feat-rag-agent-system`. It installs `requirements.txt` before
+`.github/workflows/ci.yml` runs for every pull request and for direct pushes
+to `main`, `feat-rag-agent-system`, and `feat-observability-dashboard`
+(`feat-rag-agent-system` is the prior, already-merged capstone branch, kept
+in the list rather than removed since it's harmless). In practice, every
+commit on the active `feat-observability-dashboard` branch has run CI via
+the `pull_request` trigger regardless, since PR #49 has been open the whole
+time and a push to a branch with an open PR fires a `synchronize` event. It
+installs `requirements.txt` before
 running `pip check`, the complete pytest suite, compileall (now covering
 `app scripts tests triage triage_cli.py evaluation drift cost dashboard`),
 and the diff check. The workflow has read-only repository permissions and

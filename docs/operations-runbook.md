@@ -27,7 +27,7 @@ more-involved operational work.
 | Chat API Request Rate | `rate(...http_requests_total{route="/chat"}[5m])` | Traffic volume | Informational, no threshold | — | — |
 | Chat API p95 Latency | `histogram_quantile(0.95, ...duration_seconds...)` | 95th-percentile response time | Informational, no fixed threshold set | — | — |
 | Chat API Error Rate | 4xx and 5xx requests as a share of total `/chat` requests, 5-minute window | Live error rate | under 2% (green) | 2-5% (orange) | 5% or more (red) |
-| Feature Quality Matrix | `afyaplus_feature_quality_score{metric="overall"}` | Last evaluation run's overall score, 1-5 scale (5 = best) | 4.0 or higher (matches the SPEC-7.1 gate threshold) | — | below 4.0 |
+| Feature Quality Matrix | `afyaplus_feature_quality_score{metric="overall"}` | Last evaluation run's overall score, 1-5 scale (5 = best) | 4.0 or higher (matches the SPEC-7.1 gate threshold in `evaluation/quality_gates.py`) | — | below 4.0 — but read the value yourself: this panel is a plain gradient bar with no threshold coloring configured in Grafana, unlike the other rows here |
 | Drift Vector Status | `afyaplus_drift_detected`, `afyaplus_drift_action_required` | Whether the last drift simulation flagged a column | `0` (green) | — | `1` (red) |
 | Budget Capital Utilisation | `afyaplus_budget_utilization_ratio` | Last cost projection's % of the daily budget cap | under 80% (green) | 80-95% (orange) | 95% or more (red) |
 | Projected 30-Day Cost | `afyaplus_projected_30d_cost_usd` | Last cost projection's raw USD figure | Informational, no fixed threshold | — | — |

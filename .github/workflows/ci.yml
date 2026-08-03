@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - feat-rag-agent-system
+      - feat-observability-dashboard
   workflow_dispatch:
 
 permissions:

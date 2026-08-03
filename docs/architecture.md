@@ -130,7 +130,8 @@ guarantees, and limitations.
 
 ## API and Failure Behavior
 
-The service exposes Chainlit at `/ui`, `GET /health`, and `POST /chat`.
+The service exposes Chainlit at `/ui`, `GET /health`, `POST /chat`, and the
+unauthenticated `GET /metrics` (SPEC-7.4, `app/observability.py`).
 Invalid API schemas return FastAPI's HTTP 422 response. Agent, model, and
 tool-loop exceptions are translated to HTTP 503 with a generic message so
 internal details are not returned to the caller.

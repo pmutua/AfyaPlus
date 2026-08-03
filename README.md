@@ -65,8 +65,13 @@ app/
   models/                # Pydantic request and response schemas
   rag/                   # Chunking, embeddings, ingestion, retrieval, grounding
   safeguards/            # PII patterns, masking, de-masking, API dependency
+  utils/                 # Process-wide logging configuration
   config.py              # Ollama local/cloud chat-model provider factory
+  observability.py       # SPEC-7.4 /metrics: bounded-label request/latency counters
   main.py                # FastAPI application and mounted Chainlit UI
+  Dockerfile             # SPEC-7.4 chat API container image
+  railway.json           # Chat API's Railway config-as-code
+  requirements.txt       # Chat API's own Docker-build dependency subset
 docs/                    # Primary product documentation
 knowledge/               # Local insurance and clinical-routing manuals
 tests/                   # Automated test suite
@@ -374,7 +379,8 @@ model-boundary assertions. They do not require real patient information.
 ## CI/CD and Railway Production
 
 GitHub Actions runs dependency, test, compilation, and whitespace checks for
-pull requests and pushes to `main` or `feat-rag-agent-system`. Production has
+every pull request, and for direct pushes to `main`, `feat-rag-agent-system`,
+or `feat-observability-dashboard`. Production has
 no GitHub source connected — every deploy is a manual `railway up`, so CI
 passing is not currently a deploy gate. Runtime settings for the chat API are versioned in
 `app/railway.json`; the `dashboard`, `prometheus`, and `grafana` services

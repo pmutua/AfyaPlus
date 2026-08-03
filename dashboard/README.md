@@ -19,6 +19,37 @@ the `X-Dashboard-Token` header because query values may be retained in browser
 history or proxy logs. `/metrics` intentionally remains unauthenticated for
 the private Prometheus scrape network.
 
+## Evidence-file viewer
+
+`GET /artifacts` lists the raw evidence behind every panel and every
+`executive_summary.md` claim; `GET /artifacts/{path}` serves one file. Both
+inherit the same `DASHBOARD_ACCESS_TOKEN` auth as every route except
+`/metrics`.
+
+Deliberately not a general file browser: `dashboard/artifacts.py` allowlists
+exactly 14 relative paths (the SPEC-7.1-7.3 CSVs/JSONL, the three drift HTML
+reports, and `executive_summary.md`/`.pdf`), since `DASHBOARD_ARTIFACT_ROOT`
+in production is the whole app container (`/app`), including source code.
+The allowlist check runs on the raw requested string before any filesystem
+resolution, plus a resolved-path containment check as defense-in-depth
+against traversal.
+
+Authentication accepts, in priority order: the `X-Dashboard-Token` header, an
+`HttpOnly`/`SameSite=Strict` session cookie, or the `?access_token=` query
+parameter. The first request that authenticates via query param gets the
+cookie set automatically (1-hour `Max-Age`, `Secure` when served over HTTPS)
+so the token never has to appear in a second URL for the rest of that browser
+session — avoiding repeated exposure via proxy/access logs and browser
+history. Header auth (the automation path) never touches the cookie. Every
+authenticated response also gets `Referrer-Policy: no-referrer`.
+
+Served HTML artifacts (the drift reports) get
+`Content-Security-Policy: sandbox allow-scripts` and
+`X-Content-Type-Options: nosniff` — same-origin HTML is a stored-XSS surface
+even when the content is code-generated rather than user-authored; the
+sandbox blocks cookie/localStorage access, top-level navigation, and popups
+from the served page while keeping the reports' interactive charts working.
+
 ## Run the observability stack
 
 Set `DASHBOARD_ACCESS_TOKEN` and `GRAFANA_ADMIN_PASSWORD`, then run:
@@ -59,6 +90,9 @@ from the dashboard's last deploy, not live-refreshed.
 
 - Startup fails on missing authentication, malformed URLs, or invalid/missing
   artifacts.
+- `/artifacts` serves only the explicit 14-path allowlist in
+  `dashboard/artifacts.py`, never a general file browser — see "Evidence-file
+  viewer" above.
 - Runtime health-probe failures become `UNKNOWN`; they do not crash rendering.
 - The API exports bounded route/method/status-class metrics only. Messages,
   thread IDs, IP addresses, and patient identifiers are never metric labels.
