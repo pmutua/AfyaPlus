@@ -18,7 +18,7 @@ from dashboard.config import (
     load_settings,
 )
 from dashboard.data_sources import DashboardDataError, load_dashboard_data
-from dashboard.health import HealthEvidence, probe_health
+from dashboard.health import HealthEvidence, parse_exception_count, probe_health
 from dashboard.main import create_app
 
 ROOT = Path(__file__).parents[1]
@@ -89,6 +89,9 @@ def test_dashboard_renders_all_sections_with_correct_token() -> None:
         assert section in response.text
     assert "HEALTHY" in response.text
     assert "openai/gpt-4o-mini" in response.text
+    assert response.text.count("<progress") == 2
+    assert "Daily cap" in response.text
+    assert "Monthly cap" in response.text
 
 
 def test_failed_health_probe_degrades_to_unknown() -> None:
@@ -97,7 +100,47 @@ def test_failed_health_probe_degrades_to_unknown() -> None:
 
     assert response.status_code == 200
     assert "UNKNOWN" in response.text
-    assert probe_health("http://127.0.0.1:1/health", 0.1).status == "UNKNOWN"
+    result = probe_health("http://127.0.0.1:1/health", 0.1)
+    assert result.status == "UNKNOWN"
+    assert result.exception_count is None
+
+
+def test_parse_exception_count_sums_only_4xx_and_5xx() -> None:
+    metrics_text = (
+        "# TYPE afyaplus_api_http_requests_total counter\n"
+        'afyaplus_api_http_requests_total{method="GET",route="/health",'
+        'status_class="2xx"} 5.0\n'
+        'afyaplus_api_http_requests_total{method="POST",route="/chat",'
+        'status_class="4xx"} 2.0\n'
+        'afyaplus_api_http_requests_total{method="POST",route="/chat",'
+        'status_class="5xx"} 1.0\n'
+    )
+
+    assert parse_exception_count(metrics_text) == 3
+
+
+def test_parse_exception_count_is_zero_with_no_failures() -> None:
+    metrics_text = (
+        "# TYPE afyaplus_api_http_requests_total counter\n"
+        'afyaplus_api_http_requests_total{method="GET",route="/health",'
+        'status_class="2xx"} 5.0\n'
+    )
+
+    assert parse_exception_count(metrics_text) == 0
+
+
+def test_dashboard_shows_exception_count_from_health_evidence() -> None:
+    def _healthy_with_exceptions(_url: str, _timeout: float) -> HealthEvidence:
+        return HealthEvidence(
+            "HEALTHY", "https://afyaplus.example/health", "Ready", 3
+        )
+
+    client = TestClient(create_app(_settings(), _healthy_with_exceptions))
+    response = client.get("/", headers={"X-Dashboard-Token": TOKEN})
+
+    assert response.status_code == 200
+    assert "4xx/5xx exceptions" in response.text
+    assert "failures observed" in response.text
 
 
 def test_query_param_auth_bootstraps_an_httponly_session_cookie() -> None:

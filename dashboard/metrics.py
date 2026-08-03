@@ -22,6 +22,7 @@ class DashboardMetrics:
     drift_action_required: Gauge
     projected_cost_usd: Gauge
     budget_utilization: Gauge
+    monthly_budget_utilization: Gauge
 
 
 def _gauge(
@@ -61,7 +62,11 @@ def create_metrics() -> DashboardMetrics:
             registry, "afyaplus_projected_30d_cost_usd", "Projected 30-day USD."
         ),
         budget_utilization=_gauge(
-            registry, "afyaplus_budget_utilization_ratio", "Budget utilization."
+            registry, "afyaplus_budget_utilization_ratio", "Daily budget utilization."
+        ),
+        monthly_budget_utilization=_gauge(
+            registry, "afyaplus_monthly_budget_utilization_ratio",
+            "Monthly budget utilization.",
         ),
     )
 
@@ -86,6 +91,7 @@ def publish_artifacts(metrics: DashboardMetrics, data: DashboardData) -> None:
         )
     metrics.projected_cost_usd.set(data.budget.projected_cost_usd)
     metrics.budget_utilization.set(data.budget.utilization)
+    metrics.monthly_budget_utilization.set(data.budget.monthly_utilization)
 
 
 def publish_health(

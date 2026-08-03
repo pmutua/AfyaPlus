@@ -81,6 +81,11 @@ def test_projection_has_exact_75_25_mix_and_reconciles() -> None:
     ):
         assert sum(Decimal(value) for value in details[column]) == Decimal(total[column])
     assert total["budget_status"] == "WARNING"
+    assert Decimal(total["monthly_budget_usd"]) == Decimal("3.60")
+    assert total["monthly_budget_status"] in {"OK", "WARNING", "CRITICAL"}
+    assert Decimal(total["monthly_budget_utilization"]) == (
+        Decimal(total["projected_cost_usd"]) / Decimal("3.60")
+    ).quantize(Decimal("0.0001"))
 
 
 def test_optimizer_uses_quality_gates_and_handles_no_eligible_model() -> None:

@@ -25,9 +25,19 @@
     th,td { padding:12px 10px; text-align:left; border-bottom:1px solid var(--line); }
     th { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; }
     .badge { display:inline-flex; padding:4px 9px; border-radius:999px; font-size:.72rem; font-weight:800; letter-spacing:.06em; }
-    .healthy,.pass,.nominal { color:#071512; background:var(--mint); }
+    .healthy,.pass,.nominal,.ok { color:#071512; background:var(--mint); }
     .unknown,.warning,.drift { color:#241500; background:var(--amber); }
-    .action,.fail { color:#250400; background:var(--red); }
+    .action,.fail,.critical { color:#250400; background:var(--red); }
+    .progress-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:14px 0; }
+    .progress-row > div { display:flex; flex-direction:column; gap:6px; }
+    progress { width:100%; height:10px; border-radius:999px; overflow:hidden; appearance:none; border:none; background:#081d18; }
+    progress::-webkit-progress-bar { background:#081d18; border-radius:999px; }
+    progress::-webkit-progress-value { border-radius:999px; background:var(--mint); }
+    progress::-moz-progress-bar { border-radius:999px; background:var(--mint); }
+    progress.warning::-webkit-progress-value { background:var(--amber); }
+    progress.warning::-moz-progress-bar { background:var(--amber); }
+    progress.critical::-webkit-progress-value { background:var(--red); }
+    progress.critical::-moz-progress-bar { background:var(--red); }
     footer { margin-top:22px; color:var(--muted); font-size:.8rem; }
     @media (max-width:800px) { .half { grid-column:span 12; } header { align-items:start; flex-direction:column; } .metric-row { grid-template-columns:1fr; } }
   </style>
@@ -46,10 +56,19 @@
   <div class="grid">
     <section class="half">
       <h2>System Health</h2>
-      <div class="metric">
-        <span class="label">AfyaPlus API</span>
-        <strong>{{ health.status }}</strong>
-        <span class="badge {{ health.status|lower }}">{{ health.detail }}</span>
+      <div class="metric-row">
+        <div class="metric">
+          <span class="label">AfyaPlus API</span>
+          <strong>{{ health.status }}</strong>
+          <span class="badge {{ health.status|lower }}">{{ health.detail }}</span>
+        </div>
+        <div class="metric">
+          <span class="label">4xx/5xx exceptions</span>
+          <strong>{{ health.exception_count if health.exception_count is not none else "n/a" }}</strong>
+          <span class="badge {{ 'nominal' if not health.exception_count else 'warning' }}">
+            {{ "no failures observed" if not health.exception_count else "failures observed" }}
+          </span>
+        </div>
       </div>
       <p>Probe target: {{ health.endpoint }}</p>
     </section>
@@ -59,10 +78,20 @@
       <div class="metric-row">
         <div class="metric"><span class="label">30-day USD</span><strong>${{ "%.4f"|format(data.budget.projected_cost_usd) }}</strong></div>
         <div class="metric"><span class="label">30-day KES</span><strong>KES {{ "%.2f"|format(data.budget.projected_cost_kes) }}</strong></div>
-        <div class="metric"><span class="label">Daily budget</span><strong>{{ "%.1f"|format(data.budget.utilization * 100) }}%</strong></div>
       </div>
-      <p><span class="badge {{ data.budget.status|lower }}">{{ data.budget.status }}</span>
-        {{ data.budget.projected_requests }} projected requests · FX {{ data.budget.exchange_rate }} on {{ data.budget.exchange_rate_date }}</p>
+      <div class="progress-row">
+        <div>
+          <span class="label">Daily cap — ${{ "%.4f"|format(data.budget.daily_budget_usd) }}</span>
+          <progress class="{{ data.budget.status|lower }}" max="100" value="{{ (data.budget.utilization * 100)|round(1) }}"></progress>
+          <span class="badge {{ data.budget.status|lower }}">{{ "%.1f"|format(data.budget.utilization * 100) }}% · {{ data.budget.status }}</span>
+        </div>
+        <div>
+          <span class="label">Monthly cap — ${{ "%.2f"|format(data.budget.monthly_budget_usd) }}</span>
+          <progress class="{{ data.budget.monthly_status|lower }}" max="100" value="{{ (data.budget.monthly_utilization * 100)|round(1) }}"></progress>
+          <span class="badge {{ data.budget.monthly_status|lower }}">{{ "%.1f"|format(data.budget.monthly_utilization * 100) }}% · {{ data.budget.monthly_status }}</span>
+        </div>
+      </div>
+      <p>{{ data.budget.projected_requests }} projected requests · FX {{ data.budget.exchange_rate }} on {{ data.budget.exchange_rate_date }}</p>
     </section>
 
     <section>

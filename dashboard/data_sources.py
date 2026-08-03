@@ -20,6 +20,9 @@ class BudgetEvidence:
     daily_budget_usd: float
     utilization: float
     status: str
+    monthly_budget_usd: float
+    monthly_utilization: float
+    monthly_status: str
     exchange_rate: float
     exchange_rate_date: str
 
@@ -150,7 +153,8 @@ def load_budget(root: Path) -> BudgetEvidence:
     required = {
         "scope", "projected_requests", "projected_cost_usd",
         "projected_cost_kes", "daily_budget_usd", "budget_utilization",
-        "budget_status", "usd_to_kes", "exchange_rate_date",
+        "budget_status", "monthly_budget_usd", "monthly_budget_utilization",
+        "monthly_budget_status", "usd_to_kes", "exchange_rate_date",
     }
     path = root / "cost" / "cost_projection_30d.csv"
     frame = _read_csv(path, required)
@@ -159,7 +163,8 @@ def load_budget(root: Path) -> BudgetEvidence:
         raise DashboardDataError("Cost projection needs exactly one overall row.")
     numeric = (
         "projected_requests", "projected_cost_usd", "projected_cost_kes",
-        "daily_budget_usd", "budget_utilization", "usd_to_kes",
+        "daily_budget_usd", "budget_utilization", "monthly_budget_usd",
+        "monthly_budget_utilization", "usd_to_kes",
     )
     _numeric(overall, numeric, path.name)
     row = overall.iloc[0]
@@ -170,6 +175,9 @@ def load_budget(root: Path) -> BudgetEvidence:
         daily_budget_usd=float(row["daily_budget_usd"]),
         utilization=float(row["budget_utilization"]),
         status=str(row["budget_status"]),
+        monthly_budget_usd=float(row["monthly_budget_usd"]),
+        monthly_utilization=float(row["monthly_budget_utilization"]),
+        monthly_status=str(row["monthly_budget_status"]),
         exchange_rate=float(row["usd_to_kes"]),
         exchange_rate_date=str(row["exchange_rate_date"]),
     )

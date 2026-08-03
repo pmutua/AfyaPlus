@@ -430,6 +430,29 @@ and its dashboard probes the real `app/` service's `/health` endpoint.
 - `executive_summary.md`/`.pdf` (SPEC-7.5) — a one-page leadership brief
   citing every numerical claim to its exact source artifact and column.
 
+### Reviewer quick-check: key files per phase
+
+All outputs below are already generated and committed — no need to run
+anything to review them; regeneration commands are in the next section only
+if you want to reproduce them yourself.
+
+| Phase | What to open | What it proves |
+|---|---|---|
+| 1. Evaluation | [evaluation/full_evaluation_results.csv](evaluation/full_evaluation_results.csv) | Row-by-row BLEU-4/ROUGE-L/token F1 for both models, all 15 questions |
+| | [evaluation/llm_judge_matrix.csv](evaluation/llm_judge_matrix.csv) | Correctness/groundedness/relevance/helpfulness/overall per answer |
+| | [evaluation/model_comparison_summary.csv](evaluation/model_comparison_summary.csv) | Mean scores aggregated per model |
+| | [evaluation/quality_gate_log.csv](evaluation/quality_gate_log.csv) | Explicit pass/fail per clinical gate (`gpt-4o` genuinely fails one) |
+| 2. Drift | [drift/drift_month_1.html](drift/drift_month_1.html), [drift_month_2.html](drift/drift_month_2.html), [drift_month_3.html](drift/drift_month_3.html) | Three interactive Evidently AI snapshots |
+| | [drift/drift_trend_table.csv](drift/drift_trend_table.csv) | Monthly means and mean-change per column |
+| | [drift/drift_alert_log.jsonl](drift/drift_alert_log.jsonl) | Machine-readable alerts, flagging the exact month/column each metric first drifted |
+| 3. Cost | [cost/cost_projection_30d.csv](cost/cost_projection_30d.csv) | 30-day spend by model and feature, daily and monthly budget utilization |
+| | [cost/cost_per_request_comparison.csv](cost/cost_per_request_comparison.csv) | Per-request USD/KES cost, `gpt-4o-mini` vs `gpt-4o` |
+| | [cost/structural_savings_analysis.csv](cost/structural_savings_analysis.csv) | Dollar savings from routing to the cheapest model that still clears every gate |
+| 4. Dashboard | [dashboard/README.md](dashboard/README.md) | Launch instructions (local and Railway) |
+| | [dashboard/templates/index.html](dashboard/templates/index.html) | The four mandatory sections: System Health (status + live exception count), Feature Quality Matrix, Drift Vector Status, Budget Capital Utilisation (daily + monthly progress bars) |
+| | `GET /metrics` on a running dashboard | Valid Prometheus scrape output (see [docs/api.md](docs/api.md)) |
+| 5. Executive summary | [executive_summary.md](executive_summary.md) / [executive_summary.pdf](executive_summary.pdf) | One-page brief, every claim cited to its exact source file/column in the "Source register" |
+
 Run each phase from the repository root (Windows PowerShell):
 
 ```powershell

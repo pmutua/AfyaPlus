@@ -29,18 +29,20 @@ MODEL_SHARES = {
     "openai/gpt-4o": Decimal("0.25"),
 }
 DAILY_BUDGET_USD = Decimal("0.12")
+MONTHLY_BUDGET_USD = DAILY_BUDGET_USD * DAYS
 MONEY_QUANTUM = Decimal("0.00000001")
 
 
-def budget_status(
-    daily_spend: Decimal,
-    daily_cap: Decimal = DAILY_BUDGET_USD,
-) -> tuple[str, Decimal]:
-    """Return an out-of-band alert status and utilization."""
+def budget_status(spend: Decimal, cap: Decimal) -> tuple[str, Decimal]:
+    """Return an out-of-band alert status and utilization for any spend/cap pair.
 
-    if daily_spend < 0 or daily_cap <= 0:
+    Used for both the daily and the independently-tracked monthly cap - the
+    thresholds (80% WARNING, 95% CRITICAL) are the same in either case.
+    """
+
+    if spend < 0 or cap <= 0:
         raise ValueError("Spend must be non-negative and cap must be positive.")
-    utilization = daily_spend / daily_cap
+    utilization = spend / cap
     if utilization >= Decimal("0.95"):
         return "CRITICAL", utilization
     if utilization >= Decimal("0.80"):
@@ -106,7 +108,10 @@ def _total_row(details: list[dict[str, object]]) -> dict[str, object]:
         Decimal("0"),
     )
     daily_cost = total_cost / DAYS
-    status, utilization = budget_status(daily_cost)
+    status, utilization = budget_status(daily_cost, DAILY_BUDGET_USD)
+    monthly_status, monthly_utilization = budget_status(
+        total_cost, MONTHLY_BUDGET_USD
+    )
     return {
         "scope": "overall",
         "model": "75% gpt-4o-mini / 25% gpt-4o",
@@ -128,6 +133,9 @@ def _total_row(details: list[dict[str, object]]) -> dict[str, object]:
         "daily_budget_usd": str(DAILY_BUDGET_USD),
         "budget_utilization": f"{utilization:.4f}",
         "budget_status": status,
+        "monthly_budget_usd": str(MONTHLY_BUDGET_USD),
+        "monthly_budget_utilization": f"{monthly_utilization:.4f}",
+        "monthly_budget_status": monthly_status,
     }
 
 
