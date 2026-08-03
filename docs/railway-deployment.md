@@ -20,7 +20,7 @@ panels mean, incident response), see
 | `afyaplus-rag-agent` | Chat API (FastAPI + Chainlit + LangGraph) | [afyaplus-rag-agent-production.up.railway.app](https://afyaplus-rag-agent-production.up.railway.app) | `app/railway.json` |
 | `dashboard` | Executive observability dashboard | [dashboard-production-743b.up.railway.app](https://dashboard-production-743b.up.railway.app) (token-gated — append `?access_token=<token>` once, or send `X-Dashboard-Token`) | `dashboard/railway.json` |
 | `prometheus` | Metrics scraping/storage | No (private only) | `dashboard/railway/prometheus.railway.json` |
-| `grafana` | Metrics visualization | [grafana-production-593c.up.railway.app](https://grafana-production-593c.up.railway.app/login) (auth-gated — `admin` / `GRAFANA_ADMIN_PASSWORD`) | `dashboard/railway/grafana.railway.json` |
+| `grafana` | Metrics visualization | [grafana-production-593c.up.railway.app](https://grafana-production-593c.up.railway.app/login) (auth-gated — `admin` / `GF_SECURITY_ADMIN_PASSWORD`) | `dashboard/railway/grafana.railway.json` |
 
 Domain names are per-deployment (Railway assigns a random suffix); if a
 service is ever recreated, its URL will change — reconfirm with `railway
@@ -133,10 +133,23 @@ to change them).
 
 ### `grafana`
 
+**Use `GF_SECURITY_ADMIN_USER`/`GF_SECURITY_ADMIN_PASSWORD` here — not
+`GRAFANA_ADMIN_USER`/`GRAFANA_ADMIN_PASSWORD`.** The latter are
+Compose-only convenience names: `docker-compose.yml`'s `environment:`
+block translates them into the real `GF_SECURITY_ADMIN_*` vars Grafana
+itself reads, for local use only. Railway never runs `docker-compose.yml`,
+so setting the Compose-only names here does nothing — this was a real bug
+in this doc: it previously told readers to set `GRAFANA_ADMIN_USER`/
+`GRAFANA_ADMIN_PASSWORD` on Railway, which Grafana silently ignores,
+leaving the live service on its own factory-default `admin`/`admin`
+credentials indefinitely. Found and fixed after that exact exposure was
+discovered live on the production service — see the operations runbook's
+[secret rotation](operations-runbook.md#5-secret-rotation) section.
+
 | Variable | Value | Secret? |
 |---|---|---|
-| `GRAFANA_ADMIN_USER` | `admin` (or your choice) | no |
-| `GRAFANA_ADMIN_PASSWORD` | random, 16+ chars | **yes** |
+| `GF_SECURITY_ADMIN_USER` | `admin` (or your choice) | no |
+| `GF_SECURITY_ADMIN_PASSWORD` | random, 16+ chars | **yes** |
 | `GF_USERS_ALLOW_SIGN_UP` | `false` | no |
 | `GF_AUTH_ANONYMOUS_ENABLED` | `false` | no |
 | `GF_SECURITY_DISABLE_GRAVATAR` | `true` | no |
@@ -144,14 +157,29 @@ to change them).
 | `PORT` | `3000` | no |
 
 ```powershell
-$env:GRAFANA_ADMIN_PASSWORD = -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 24 | % {[char]$_})
-railway variable set "GRAFANA_ADMIN_PASSWORD=$env:GRAFANA_ADMIN_PASSWORD" --service grafana --skip-deploys
-railway variable set "GRAFANA_ADMIN_USER=admin" --service grafana --skip-deploys
+$env:GF_SECURITY_ADMIN_PASSWORD = -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 24 | % {[char]$_})
+railway variable set "GF_SECURITY_ADMIN_PASSWORD=$env:GF_SECURITY_ADMIN_PASSWORD" --service grafana --skip-deploys
+railway variable set "GF_SECURITY_ADMIN_USER=admin" --service grafana --skip-deploys
 railway variable set "GF_USERS_ALLOW_SIGN_UP=false" --service grafana --skip-deploys
 railway variable set "GF_AUTH_ANONYMOUS_ENABLED=false" --service grafana --skip-deploys
 railway variable set "GF_SECURITY_DISABLE_GRAVATAR=true" --service grafana --skip-deploys
 railway variable set "GF_ANALYTICS_REPORTING_ENABLED=false" --service grafana --skip-deploys
 railway variable set "PORT=3000" --service grafana --skip-deploys
+```
+
+After setting these, redeploy so Grafana actually picks them up —
+`railway redeploy --service grafana --yes` — then verify with a direct
+login API check before trusting the UI:
+
+```bash
+curl -s -X POST "https://<grafana-service>.up.railway.app/login" \
+  -H "Content-Type: application/json" \
+  -d '{"user":"admin","password":"<the real value>"}'
+# expect: {"message":"Logged in","redirectUrl":"/"}
+# also confirm the OLD default is rejected:
+curl -s -X POST "https://<grafana-service>.up.railway.app/login" \
+  -H "Content-Type: application/json" -d '{"user":"admin","password":"admin"}'
+# expect: 401 {"message":"Invalid username or password"}
 ```
 
 **Windows Git Bash users**: never set a variable whose value starts with a

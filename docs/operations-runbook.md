@@ -130,9 +130,11 @@ an accidental print during a Railway config inspection.
 1. Generate a new value in the provider's own console:
    - **`OLLAMA_CLOUD_API_KEY`**: Ollama Cloud console.
    - **`QDRANT_API_KEY`**: Qdrant Cloud console, for the specific cluster.
-   - **`DASHBOARD_ACCESS_TOKEN`** / **`GRAFANA_ADMIN_PASSWORD`**: these
-     aren't rotated at a provider — just generate a new random string
-     yourself (see [railway-deployment.md section 3](railway-deployment.md#3-per-service-environment-variables)
+   - **`DASHBOARD_ACCESS_TOKEN`** / **`GF_SECURITY_ADMIN_PASSWORD`**
+     (Grafana's admin password — the real Railway variable name, not the
+     Compose-only `GRAFANA_ADMIN_PASSWORD` alias): these aren't rotated at
+     a provider — just generate a new random string yourself (see
+     [railway-deployment.md section 3](railway-deployment.md#3-per-service-environment-variables)
      for the PowerShell one-liner).
 2. Set the new value on the relevant Railway service:
    ```powershell
