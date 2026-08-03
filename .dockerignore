@@ -10,6 +10,8 @@
 .ruff_cache
 evaluation/.cache
 drift/*.html
+!drift/drift_month_*.html
 *.pptx
 *.pdf
 !knowledge/*.pdf
+!executive_summary.pdf
