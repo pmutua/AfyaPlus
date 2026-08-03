@@ -5,6 +5,16 @@ generated SPEC-7.1–7.3 evidence: live system health, feature quality, drift
 vectors, and budget utilisation. It reads only sanitized artifacts and never
 loads evaluation questions, model answers, or patient identifiers.
 
+**Feature quality is a summary, not every SPEC-7.1 metric.** `evaluation/`
+computes BLEU-4, ROUGE-1/2/L, token F1, and four individual LLM-judge
+dimensions (correctness, groundedness, relevance, helpfulness) per answer —
+but this dashboard and its matching Grafana panel only ever surface
+`rouge_l` and the judge's blended `overall` score per model/feature
+(`dashboard/data_sources.py::_quality_row()`). The rest exist only in
+`evaluation/full_evaluation_results.csv` and `llm_judge_matrix.csv`,
+reachable through the [evidence-file viewer](#evidence-file-viewer) below,
+not through any chart.
+
 ## Run locally on Windows
 
 From the repository root:

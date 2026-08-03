@@ -97,6 +97,7 @@
         "type": "prometheus",
         "uid": "afyaplus-prometheus"
       },
+      "description": "Summary only: rouge_l and the LLM judge's blended overall score (1-5) per model/feature. BLEU-4, token F1, and the four individual judge dimensions (correctness, groundedness, relevance, helpfulness) are computed in evaluation/ but not exported here - see full_evaluation_results.csv and llm_judge_matrix.csv via the dashboard's /artifacts evidence viewer.",
       "fieldConfig": {
         "defaults": {
           "max": 5,
