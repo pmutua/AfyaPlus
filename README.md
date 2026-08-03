@@ -48,6 +48,8 @@ Detailed documentation:
 
 - [Architecture](docs/architecture.md)
 - [Deployment guide](docs/deployment.md)
+- [Railway deployment guide (all four SPEC-7.4 services)](docs/railway-deployment.md)
+- [Operations runbook (daily checks, Grafana panels, incident response)](docs/operations-runbook.md)
 - [Deployment decision record](docs/deployment-architecture-research.md)
 - [Sequence diagrams](docs/sequence-diagram.md)
 - [Privacy safeguards](docs/privacy.md)
@@ -63,18 +65,35 @@ app/
   models/                # Pydantic request and response schemas
   rag/                   # Chunking, embeddings, ingestion, retrieval, grounding
   safeguards/            # PII patterns, masking, de-masking, API dependency
+  utils/                 # Process-wide logging configuration
   config.py              # Ollama local/cloud chat-model provider factory
+  observability.py       # SPEC-7.4 /metrics: bounded-label request/latency counters
   main.py                # FastAPI application and mounted Chainlit UI
+  Dockerfile             # SPEC-7.4 chat API container image
+  railway.json           # Chat API's Railway config-as-code
+  requirements.txt       # Chat API's own Docker-build dependency subset
 docs/                    # Primary product documentation
 knowledge/               # Local insurance and clinical-routing manuals
 tests/                   # Automated test suite
 triage/                  # Foundational Week 1 triage engine
   env.example            # Triage's own configuration template
 triage_cli.py             # Foundational triage CLI entrypoint
+evaluation/               # SPEC-7.1 clinical model comparison pipeline
+drift/                    # SPEC-7.2 statistical drift monitoring
+cost/                     # SPEC-7.3 token cost/efficiency analysis
+dashboard/                # SPEC-7.4 authenticated executive dashboard + Grafana
+scripts/                  # Provider verification and executive-brief rendering
+executive_summary.md      # SPEC-7.5 evidence-backed leadership brief (source)
+executive_summary.pdf     # SPEC-7.5 rendered one-page leadership brief
+docker-compose.yml        # Chat API + dashboard + Prometheus + Grafana stack
 .env.example             # RAG Agent System configuration template
 requirements.txt         # Python dependencies
 .chainlit/config.toml    # Safe UI branding and feature settings
 ```
+
+See "Executive Observability Dashboard (SPEC-7)" below for what the
+`evaluation/`, `drift/`, `cost/`, and `dashboard/` packages do and how to run
+each phase.
 
 The Qdrant collection is created and populated lazily on the first knowledge
 query. Once non-empty, it is reused across restarts. Rebuild into a new
@@ -359,16 +378,118 @@ model-boundary assertions. They do not require real patient information.
 
 ## CI/CD and Railway Production
 
+Live production URLs:
+
+| Service | URL |
+|---|---|
+| Chat API | [afyaplus-rag-agent-production.up.railway.app](https://afyaplus-rag-agent-production.up.railway.app) |
+| Executive dashboard | [dashboard-production-743b.up.railway.app](https://dashboard-production-743b.up.railway.app) (token-gated) |
+| Grafana | [grafana-production-593c.up.railway.app](https://grafana-production-593c.up.railway.app/login) (login-gated) |
+| Prometheus | private-network only, no public URL |
+
+Railway assigns a random suffix per deployment, so these change if a service
+is ever recreated — reconfirm with `railway status` rather than assuming
+they're permanent.
+
 GitHub Actions runs dependency, test, compilation, and whitespace checks for
-pull requests and pushes to `main` or `feat-rag-agent-system`. Production uses
-Railway's GitHub deployment trigger with **Wait for CI** enabled, so a failed
-workflow skips the associated deployment. Runtime settings are versioned in
-`railway.json`; secrets remain in Railway variables.
+every pull request, and for direct pushes to `main`, `feat-rag-agent-system`,
+or `feat-observability-dashboard`. Production has
+no GitHub source connected — every deploy is a manual `railway up`, so CI
+passing is not currently a deploy gate. Runtime settings for the chat API are versioned in
+`app/railway.json`; the `dashboard`, `prometheus`, and `grafana` services
+each have their own config-as-code file under `dashboard/railway/`.
+Secrets remain in Railway variables.
 
 See the [deployment guide](docs/deployment.md#railway-production-deployment)
-for the required variables, initial deployment, verification, and rollback
-procedure. Production must use `MODEL_PROVIDER=ollama_cloud`; it cannot reach a
-developer workstation's local Ollama service.
+for this service's required variables, initial deployment, verification, and
+rollback procedure. Production must use `MODEL_PROVIDER=ollama_cloud`; it
+cannot reach a developer workstation's local Ollama service. For the other
+three Railway services (dashboard, Prometheus, Grafana), see the
+[Railway deployment guide](docs/railway-deployment.md) instead — it covers
+all four services' setup, environment variables, and deploy commands in one
+place.
+
+## Executive Observability Dashboard (SPEC-7)
+
+A cross-cutting capstone that evaluates and monitors the RAG Agent System
+above — not a separate app. It reuses the real
+`app/agent/prompts.py::SYSTEM_PROMPT` and `app/safeguards/masking.py::mask()`,
+and its dashboard probes the real `app/` service's `/health` endpoint.
+
+- `evaluation/` (SPEC-7.1) — clinical model comparison (`openai/gpt-4o-mini`
+  vs. `openai/gpt-4o` via OpenRouter) against a fixed 15-question dataset,
+  lexical metrics, an LLM judge, and clinical quality gates.
+- `drift/` (SPEC-7.2) — deterministic monthly traffic simulation, SciPy K-S
+  drift detection, and Evidently HTML reports.
+- `cost/` (SPEC-7.3) — dated OpenRouter pricing, a 30-day cost projection,
+  budget status, and quality-gated model-routing savings analysis.
+- `dashboard/` (SPEC-7.4) — an authenticated FastAPI executive dashboard
+  (`DASHBOARD_ACCESS_TOKEN` gates every route except `/metrics`) plus a
+  Prometheus/Grafana stack charting live Chat API request rate, p95 latency,
+  and error rate alongside the SPEC-7.1–7.3 quality/drift/cost evidence.
+- `executive_summary.md`/`.pdf` (SPEC-7.5) — a one-page leadership brief
+  citing every numerical claim to its exact source artifact and column.
+
+### Reviewer quick-check: key files per phase
+
+All outputs below are already generated and committed — no need to run
+anything to review them; regeneration commands are in the next section only
+if you want to reproduce them yourself.
+
+| Phase | What to open | What it proves |
+|---|---|---|
+| 1. Evaluation | [evaluation/full_evaluation_results.csv](evaluation/full_evaluation_results.csv) | Row-by-row BLEU-4/ROUGE-L/token F1 for both models, all 15 questions |
+| | [evaluation/llm_judge_matrix.csv](evaluation/llm_judge_matrix.csv) | Correctness/groundedness/relevance/helpfulness/overall per answer |
+| | [evaluation/model_comparison_summary.csv](evaluation/model_comparison_summary.csv) | Mean scores aggregated per model |
+| | [evaluation/quality_gate_log.csv](evaluation/quality_gate_log.csv) | Explicit pass/fail per clinical gate (`gpt-4o` genuinely fails one) |
+| 2. Drift | [drift/drift_month_1.html](drift/drift_month_1.html), [drift_month_2.html](drift/drift_month_2.html), [drift_month_3.html](drift/drift_month_3.html) | Three interactive Evidently AI snapshots |
+| | [drift/drift_trend_table.csv](drift/drift_trend_table.csv) | Monthly means and mean-change per column |
+| | [drift/drift_alert_log.jsonl](drift/drift_alert_log.jsonl) | Machine-readable alerts, flagging the exact month/column each metric first drifted |
+| 3. Cost | [cost/cost_projection_30d.csv](cost/cost_projection_30d.csv) | 30-day spend by model and feature, daily and monthly budget utilization |
+| | [cost/cost_per_request_comparison.csv](cost/cost_per_request_comparison.csv) | Per-request USD/KES cost, `gpt-4o-mini` vs `gpt-4o` |
+| | [cost/structural_savings_analysis.csv](cost/structural_savings_analysis.csv) | Dollar savings from routing to the cheapest model that still clears every gate |
+| 4. Dashboard | [dashboard/README.md](dashboard/README.md) | Launch instructions (local and Railway) |
+| | [dashboard/templates/index.html](dashboard/templates/index.html) | The four mandatory sections: System Health (status + live exception count), Feature Quality Matrix, Drift Vector Status, Budget Capital Utilisation (daily + monthly progress bars) |
+| | `GET /metrics` on a running dashboard | Valid Prometheus scrape output (see [docs/api.md](docs/api.md)) |
+| 5. Executive summary | [executive_summary.md](executive_summary.md) / [executive_summary.pdf](executive_summary.pdf) | One-page brief, every claim cited to its exact source file/column in the "Source register" |
+
+Run each phase from the repository root (Windows PowerShell):
+
+```powershell
+# SPEC-7.1 - requires a real OPENROUTER_API_KEY in .env, even to replay a
+# full results cache with zero paid calls (evaluation/.cache/results.jsonl).
+.\.venv\Scripts\python.exe -m evaluation.run_evaluation
+
+# SPEC-7.2 - deterministic, no external calls.
+.\.venv\Scripts\python.exe -m drift.run_monthly_drift_reports
+
+# SPEC-7.3 - deterministic, reads SPEC-7.1's evaluation output.
+.\.venv\Scripts\python.exe -m cost.run_cost_analysis
+
+# SPEC-7.4 - the authenticated dashboard alone.
+$env:DASHBOARD_ACCESS_TOKEN="replace-with-at-least-16-characters"
+.\.venv\Scripts\python.exe -m uvicorn dashboard.main:create_app --factory --host 127.0.0.1 --port 8001 --workers 1
+
+# SPEC-7.5 - renders executive_summary.md to executive_summary.pdf via an
+# isolated ReportLab environment; never touches requirements.txt.
+uv run --with reportlab python scripts/render_executive_summary.py
+```
+
+Or bring up the full stack (chat API, dashboard, Prometheus, Grafana) with
+`docker compose up --build` from the repository root — see
+[dashboard/README.md](dashboard/README.md) for ports, required variables, and
+failure-boundary details. All four services also run in production on
+Railway as separate services (not via this Compose file) — see
+[docs/railway-deployment.md](docs/railway-deployment.md) for the complete
+setup, per-service environment variables, and troubleshooting. Generated
+CSV/HTML/JSONL artifacts under `evaluation/`, `drift/`, and `cost/` are the
+underlying evidence `executive_summary.md` cites; they are reproducible
+from the commands above, not hand-authored.
+
+Capstone resources:
+
+- [Presentation deck](AfyaPlus_Executive_Observability_Presentation.pptx)
+- [Published slides](https://docs.google.com/presentation/d/e/2PACX-1vTjE2WcaibU32Qa9ACMNQMWuRcSmj9b0foi4l2X17cyIUwpvKqUvCgoHN7HbdnIWFDRKh9skuNMt9Ul/pub?start=false&loop=false&delayms=3000)
 
 ## Orchestration and Grounding Decisions
 
@@ -437,7 +558,9 @@ spaces or hyphens require additional controls before real patient use. See the
 
 ## Current Operational Limitations
 
-- No authentication, authorization, or production audit sink.
+- `/chat` and `/ui` have no authentication, authorization, or production
+  audit sink. Only the separate SPEC-7.4 dashboard (`dashboard/`) is gated,
+  by a shared `DASHBOARD_ACCESS_TOKEN`, not per-user identity or roles.
 - Rate limiting is process-local; Chainlit limits are per session and can be
   bypassed by starting another unauthenticated session.
 - The Chainlit UI remains unsuitable for real patient data without
@@ -446,8 +569,13 @@ spaces or hyphens require additional controls before real patient use. See the
 - Health checks report process liveness, not Ollama or Qdrant readiness.
 - Local model quality and latency depend on host hardware.
 - Human review remains required for clinical risk and benefits decisions.
-- Docker and deployment packaging are intentionally deferred until after the
-  course capstone.
+- Docker Compose (`docker-compose.yml`) packages the chat API, dashboard,
+  Prometheus, and Grafana for local/self-hosted use (SPEC-7.4). Production
+  on Railway runs the same four services as separate Railway services
+  (config-as-code under `app/railway.json` and `dashboard/railway/`), not
+  this Compose file directly.
+- No GitHub source is connected to any Railway service; every deploy is a
+  manual `railway up`, so a passing CI run is not currently a deploy gate.
 
 Do not expose this prototype to untrusted networks or process real patient data
 without production security, privacy, retention, monitoring, and governance

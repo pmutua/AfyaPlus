@@ -130,7 +130,8 @@ guarantees, and limitations.
 
 ## API and Failure Behavior
 
-The service exposes Chainlit at `/ui`, `GET /health`, and `POST /chat`.
+The service exposes Chainlit at `/ui`, `GET /health`, `POST /chat`, and the
+unauthenticated `GET /metrics` (SPEC-7.4, `app/observability.py`).
 Invalid API schemas return FastAPI's HTTP 422 response. Agent, model, and
 tool-loop exceptions are translated to HTTP 503 with a generic message so
 internal details are not returned to the caller.
@@ -306,19 +307,109 @@ messages.
   direct consequence of this, not an independent choice.
 
 **Access control**
-- The service has no authentication or authorization anywhere in the
-  codebase (verified by grep, not assumed). Rate limiting is the only abuse
-  control, scoped to IP (API) or browser session (UI) - never tied to a
-  real user identity.
-- No role-based access - anyone reaching the URL has identical capability.
+- Partially closed for the observability surface: the SPEC-7.4 dashboard
+  (`dashboard/`) requires a shared `DASHBOARD_ACCESS_TOKEN` on every route
+  except `/metrics`, which stays open only for the private Prometheus scrape
+  network. This is a shared secret, not per-user identity or roles.
+- The rest of the system still has no authentication or authorization
+  anywhere in the codebase (verified by grep, not assumed) - `/chat` and
+  `/ui` remain open to anyone reaching the URL. Rate limiting is the only
+  abuse control there, scoped to IP (API) or browser session (UI) - never
+  tied to a real user identity.
+- No role-based access anywhere - within each surface, every caller that
+  clears its one gate (rate limit, or the dashboard token) has identical
+  capability.
 
 **Observability**
-- Logs are stdout-only (read via `railway logs`), with no aggregation,
-  retention policy, search, or alerting. Every production issue found
-  during development (free-tier throttling, retrieval context-overload) was
-  caught by manual live testing, not by any automated signal.
-- No metrics or dashboards for latency, error rate, or retrieval quality
-  over time.
+- Partially closed for the live API: `app/observability.py` now exports
+  bounded-label (`method`, `route`, `status_class` - no user content, no
+  IDs) request-count, duration, and in-progress metrics at `/metrics`, and
+  the Grafana "AfyaPlus Executive Observability" dashboard
+  (`dashboard/grafana/`) charts real Chat API request rate, p95 latency, and
+  error rate over time from that data, alongside the SPEC-7.1-7.3 evaluation
+  quality/drift/cost panels.
+- **The Chat API metrics only ever see direct REST traffic, never Chainlit
+  UI traffic - discovered live while debugging why Grafana's "Chat API
+  Request Rate" stayed empty during active browser use.** `app/chat.py`'s
+  `run_chat()` genuinely is the one shared function both `POST /chat` and
+  Chainlit's `@cl.on_message` handler call (`app/chainlit_app.py`'s
+  `cl.make_async(run_chat)(...)`) - so grounding, masking, and the agent
+  itself behave identically either way. But `app/observability.py`'s
+  metrics middleware instruments the FastAPI HTTP layer only
+  (`@application.middleware("http")`), and a Chainlit UI message is sent
+  over an already-open WebSocket connection, not as its own new HTTP
+  request - so `route_label()` never sees anything to label `"/chat"` for
+  it. Confirmed directly: sending real messages through `/ui/` moved the
+  `route="/ui"` counters while `route="/chat"` stayed frozen. Practical
+  consequence: the "Chat API Request Rate"/"p95 Latency"/"Error Rate"
+  Grafana panels undercount real usage whenever people use the browser UI
+  rather than the REST API directly - a reader could easily mistake "0
+  chat requests" for "nobody is using this" when the opposite is true.
+  No fix attempted yet; the two lowest-effort options are instrumenting
+  inside `run_chat()` itself (call-site metrics, not HTTP-layer) so both
+  paths are counted identically, or explicitly labeling Chainlit's own
+  requests distinctly rather than folding them into the generic `"/ui"`
+  bucket.
+- Still open: no per-request retrieval-quality signal is captured in
+  production - quality tracking remains simulation/evaluation-only (offline
+  `evaluation/`/`drift/` runs), not a live measurement of what real users
+  actually received. Logs are still stdout-only (read via `railway logs`),
+  with no aggregation, retention policy, search, or alerting - the Grafana
+  panels cover metrics, not logs. Every production issue found during
+  development (free-tier throttling, retrieval context-overload) was caught
+  by manual live testing, not by any automated signal, and that remains true
+  today.
+- **Evidence artifact storage does not scale past today's small,
+  bounded file set.** `evaluation/`, `drift/`, `cost/` CSVs/HTML/PDF (see
+  `dashboard/artifacts.py`'s allowlist) are baked into the `dashboard`
+  service's Docker image at build time - both the Grafana panel numbers
+  and the `/artifacts` evidence-file viewer only ever show whatever existed
+  at the last `dashboard` deploy. This is fine at the current handful of
+  small files, but breaks down if evaluation runs accumulate historically
+  (rather than being overwritten each run), or if drift/cost start
+  producing per-day rather than per-month artifacts. **Migration path**:
+  move to external object storage (S3-compatible - Cloudflare R2 or AWS S3
+  - or a Railway Volume as a simpler same-platform first step) that the
+  evaluation/drift/cost pipelines write to directly and `dashboard/
+  artifacts.py` reads from at request time instead of the local filesystem.
+  This has a second benefit beyond scale: it would also remove the
+  "redeploy the dashboard to see new numbers" friction documented in
+  [operations-runbook.md](operations-runbook.md#3-re-running-the-evaluation--drift--cost-pipelines) -
+  new pipeline output would appear immediately, no rebuild needed. Natural
+  pairing with automating the pipelines themselves (e.g. a GitHub Actions
+  workflow writing straight to that store) rather than running them from a
+  developer's local machine.
+
+  **Status: a Railway Storage Bucket (S3-compatible, named `neat-barrel` in
+  the `afyaplus` project) already exists for this, created ahead of the
+  implementation work. Not yet wired up - logged here as the concrete plan
+  for whenever this is picked up, split into two independent phases:**
+  - **Phase 1 (dashboard reads from the bucket)**: add `boto3` to
+    `dashboard/requirements.txt`; wire the bucket's credentials into the
+    `dashboard` service via Railway variable references
+    (`${{neat-barrel.BUCKET}}`, `.ACCESS_KEY_ID`, `.SECRET_ACCESS_KEY`,
+    `.ENDPOINT`, `.REGION`); `dashboard/data_sources.py` fetches CSVs from
+    the bucket instead of local disk for the Grafana panel numbers;
+    `dashboard/artifacts.py`'s `/artifacts/{path}` route redirects to a
+    presigned URL (`s3.presign()`, zero service egress, bucket egress is
+    free) instead of serving the file itself - which also means the
+    `Content-Security-Policy: sandbox` header added for HTML artifacts in
+    `eedb8cd` becomes unnecessary, since Railway would be serving those
+    files directly, not this app's own origin. Drop the `dashboard/
+    Dockerfile` `COPY` lines for `evaluation/`/`drift/`/`cost/` entirely
+    once this lands.
+  - **Phase 2 (pipelines write to the bucket)**: `evaluation/
+    run_evaluation.py`, `drift/run_monthly_drift_reports.py`, and `cost/
+    run_cost_analysis.py` each get an `s3.putObject()` call after
+    generating their CSVs. Combined with Phase 1, this fully closes the
+    "redeploy the dashboard to see new numbers" friction - a pipeline
+    re-run alone would be enough.
+  - **Not scoped yet, a further extension beyond both phases above**:
+    timestamped/historical object keys (e.g. `evaluation/2026-07-31/
+    model_comparison_summary.csv` instead of a fixed filename) so Grafana
+    could chart quality/cost/drift trends over multiple runs instead of
+    only ever showing the latest one - today's dashboard has no history at
+    all, only a single snapshot per pipeline.
 
 **Compliance**
 - Masking as implemented is a mechanism, not full Kenya Data Protection Act

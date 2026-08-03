@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AfyaPlus Executive Observability</title>
+  <style>
+    :root { color-scheme: dark; --ink:#eefbf6; --muted:#9cb8ad; --panel:#102a25; --line:#245247; --mint:#54d6a2; --amber:#ffca68; --red:#ff7c72; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:radial-gradient(circle at 20% 0,#17483b 0,#071512 38%); color:var(--ink); font:15px/1.5 Inter,Segoe UI,sans-serif; }
+    main { width:min(1180px,92vw); margin:0 auto; padding:52px 0 72px; }
+    header { display:flex; justify-content:space-between; gap:24px; align-items:end; margin-bottom:32px; }
+    h1 { margin:0; font-size:clamp(2rem,5vw,4.5rem); letter-spacing:-.055em; line-height:.95; }
+    h2 { margin:0 0 18px; font-size:1.05rem; letter-spacing:.08em; text-transform:uppercase; color:var(--mint); }
+    p { color:var(--muted); margin:.5rem 0 0; }
+    .eyebrow { color:var(--mint); text-transform:uppercase; letter-spacing:.18em; font-size:.75rem; font-weight:700; }
+    .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:18px; }
+    section { grid-column:span 12; background:linear-gradient(145deg,rgba(16,42,37,.96),rgba(8,27,23,.96)); border:1px solid var(--line); border-radius:18px; padding:24px; box-shadow:0 24px 70px #0006; overflow:auto; }
+    .half { grid-column:span 6; }
+    .metric-row { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    .metric { padding:16px; background:#081d18; border:1px solid #1b443a; border-radius:12px; }
+    .metric strong { display:block; font-size:1.55rem; color:var(--ink); }
+    .label { color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.1em; }
+    table { width:100%; border-collapse:collapse; min-width:720px; }
+    th,td { padding:12px 10px; text-align:left; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; }
+    .badge { display:inline-flex; padding:4px 9px; border-radius:999px; font-size:.72rem; font-weight:800; letter-spacing:.06em; }
+    .healthy,.pass,.nominal,.ok { color:#071512; background:var(--mint); }
+    .unknown,.warning,.drift { color:#241500; background:var(--amber); }
+    .action,.fail,.critical { color:#250400; background:var(--red); }
+    .progress-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:14px 0; }
+    .progress-row > div { display:flex; flex-direction:column; gap:6px; }
+    progress { width:100%; height:10px; border-radius:999px; overflow:hidden; appearance:none; border:none; background:#081d18; }
+    progress::-webkit-progress-bar { background:#081d18; border-radius:999px; }
+    progress::-webkit-progress-value { border-radius:999px; background:var(--mint); }
+    progress::-moz-progress-bar { border-radius:999px; background:var(--mint); }
+    progress.warning::-webkit-progress-value { background:var(--amber); }
+    progress.warning::-moz-progress-bar { background:var(--amber); }
+    progress.critical::-webkit-progress-value { background:var(--red); }
+    progress.critical::-moz-progress-bar { background:var(--red); }
+    footer { margin-top:22px; color:var(--muted); font-size:.8rem; }
+    @media (max-width:800px) { .half { grid-column:span 12; } header { align-items:start; flex-direction:column; } .metric-row { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <div class="eyebrow">Clinical AI control plane</div>
+      <h1>AfyaPlus<br>Observability</h1>
+    </div>
+    <p>Quality, drift, cost and live-system evidence.<br>No raw patient identifiers are loaded.</p>
+  </header>
+  <p><a href="/artifacts" style="color:var(--mint)">View source evidence files &rarr;</a></p>
+
+  <div class="grid">
+    <section class="half">
+      <h2>System Health</h2>
+      <div class="metric-row">
+        <div class="metric">
+          <span class="label">AfyaPlus API</span>
+          <strong>{{ health.status }}</strong>
+          <span class="badge {{ health.status|lower }}">{{ health.detail }}</span>
+        </div>
+        <div class="metric">
+          <span class="label">4xx/5xx exceptions</span>
+          <strong>{{ health.exception_count if health.exception_count is not none else "n/a" }}</strong>
+          <span class="badge {{ 'nominal' if not health.exception_count else 'warning' }}">
+            {{ "no failures observed" if not health.exception_count else "failures observed" }}
+          </span>
+        </div>
+      </div>
+      <p>Probe target: {{ health.endpoint }}</p>
+    </section>
+
+    <section class="half">
+      <h2>Budget Capital Utilisation</h2>
+      <div class="metric-row">
+        <div class="metric"><span class="label">30-day USD</span><strong>${{ "%.4f"|format(data.budget.projected_cost_usd) }}</strong></div>
+        <div class="metric"><span class="label">30-day KES</span><strong>KES {{ "%.2f"|format(data.budget.projected_cost_kes) }}</strong></div>
+      </div>
+      <div class="progress-row">
+        <div>
+          <span class="label">Daily cap — ${{ "%.4f"|format(data.budget.daily_budget_usd) }}</span>
+          <progress class="{{ data.budget.status|lower }}" max="100" value="{{ (data.budget.utilization * 100)|round(1) }}"></progress>
+          <span class="badge {{ data.budget.status|lower }}">{{ "%.1f"|format(data.budget.utilization * 100) }}% · {{ data.budget.status }}</span>
+        </div>
+        <div>
+          <span class="label">Monthly cap — ${{ "%.2f"|format(data.budget.monthly_budget_usd) }}</span>
+          <progress class="{{ data.budget.monthly_status|lower }}" max="100" value="{{ (data.budget.monthly_utilization * 100)|round(1) }}"></progress>
+          <span class="badge {{ data.budget.monthly_status|lower }}">{{ "%.1f"|format(data.budget.monthly_utilization * 100) }}% · {{ data.budget.monthly_status }}</span>
+        </div>
+      </div>
+      <p>{{ data.budget.projected_requests }} projected requests · FX {{ data.budget.exchange_rate }} on {{ data.budget.exchange_rate_date }}</p>
+    </section>
+
+    <section>
+      <h2>Feature Quality Matrix</h2>
+      <table>
+        <thead><tr><th>Model</th><th>Feature</th><th>Success</th><th>ROUGE-L</th><th>Judge</th><th>Grounding</th><th>Clinical gates</th></tr></thead>
+        <tbody>
+        {% for row in data.quality_rows %}
+          <tr>
+            <td>{{ row.model }}</td><td>{{ row.feature }}</td>
+            <td>{{ "%.1f"|format(row.success_rate * 100) }}%</td>
+            <td>{{ "%.3f"|format(row.rouge_l) }}</td>
+            <td>{{ "%.2f"|format(row.overall) }}/5</td>
+            <td>{{ "%.1f"|format(row.grounding_rate * 100) }}%</td>
+            <td><span class="badge {{ 'pass' if row.eligible else 'fail' }}">{{ 'PASS' if row.eligible else 'FAIL' }}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Drift Vector Status</h2>
+      <table>
+        <thead><tr><th>Window</th><th>Vector</th><th>Signal</th><th>Current mean</th><th>Mean change</th><th>Drift</th><th>Action</th></tr></thead>
+        <tbody>
+        {% for row in data.drift_rows %}
+          <tr>
+            <td>{{ row.month }}</td><td>{{ row.column }}</td><td>{{ row.signal_type }}</td>
+            <td>{{ "%.4f"|format(row.current_mean) }}</td><td>{{ "%+.4f"|format(row.mean_change) }}</td>
+            <td><span class="badge {{ 'drift' if row.drift_detected else 'nominal' }}">{{ 'DETECTED' if row.drift_detected else 'NOMINAL' }}</span></td>
+            <td><span class="badge {{ 'action' if row.requires_action else 'nominal' }}">{{ 'REQUIRED' if row.requires_action else 'MONITOR' }}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </div>
+  <footer>Evidence: SPEC-7.1 evaluation · SPEC-7.2 drift · SPEC-7.3 cost · live AfyaPlus health</footer>
+</main>
+</body>
+</html>

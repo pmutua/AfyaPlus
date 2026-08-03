@@ -1,0 +1,7 @@
+fastapi
+httpx
+jinja2
+pandas
+prometheus-client
+python-dotenv
+uvicorn[standard]

@@ -1,0 +1,17 @@
+.git
+.github
+.venv
+.env
+.env.*
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+evaluation/.cache
+drift/*.html
+!drift/drift_month_*.html
+*.pptx
+*.pdf
+!knowledge/*.pdf
+!executive_summary.pdf

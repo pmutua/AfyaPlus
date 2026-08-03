@@ -24,6 +24,21 @@ qdrant-client
 # LLM / OpenRouter
 openai
 
+# SPEC-7 evaluation
+pandas
+nltk
+rouge-score
+tabulate
+
+# SPEC-7 drift detection and HTML reports
+numpy
+scipy
+evidently==0.7.21
+
+# SPEC-7 executive dashboard
+jinja2
+prometheus-client
+
 # Configuration
 python-dotenv
 

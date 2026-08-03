@@ -68,6 +68,17 @@ Status: `200 OK`.
 This endpoint does not query Ollama or Qdrant, so it is not a dependency
 readiness check.
 
+## `GET /metrics`
+
+Prometheus exposition format. Exports bounded-cardinality counters/histograms
+for completed requests, request duration, and in-progress requests, labeled
+only by `method`, `route` (from a fixed allowlist), and `status_class` — never
+by message content, thread IDs, or IP addresses. Added in SPEC-7.4
+(`app/observability.py`); intentionally unauthenticated so Prometheus can
+scrape it over Railway's private network. See
+[railway-deployment.md](railway-deployment.md) for how this is scraped in
+production.
+
 ## `POST /chat`
 
 Submits one conversation turn.

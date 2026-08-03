@@ -8,6 +8,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app.chat import production_agent, run_chat
 from app.models import ChatRequest, ChatResponse, HealthResponse
+from app.observability import install_api_observability
 from app.safeguards.rate_limiting import (
     InMemoryRateLimiter,
     RateLimitSettings,
@@ -31,6 +32,7 @@ def create_app(
     application = FastAPI(title="AfyaPlus RAG Agent System", version="1.0.0")
     limits = rate_limit_settings or load_rate_limit_settings()
     install_chat_rate_limiting(application, limits, rate_limiter)
+    install_api_observability(application)
 
     @application.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:

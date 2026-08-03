@@ -34,7 +34,7 @@ def _production_template() -> dict[str, str]:
 
 
 def test_railway_runs_single_worker_on_injected_port() -> None:
-    config = json.loads((ROOT / "railway.json").read_text(encoding="utf-8"))
+    config = json.loads((ROOT / "app" / "railway.json").read_text(encoding="utf-8"))
     command = config["deploy"]["startCommand"]
 
     assert config["build"]["builder"] == "RAILPACK"
@@ -45,7 +45,7 @@ def test_railway_runs_single_worker_on_injected_port() -> None:
 
 
 def test_railway_gates_activation_on_health_endpoint() -> None:
-    config = json.loads((ROOT / "railway.json").read_text(encoding="utf-8"))
+    config = json.loads((ROOT / "app" / "railway.json").read_text(encoding="utf-8"))
     deployment = config["deploy"]
 
     assert deployment["healthcheckPath"] == "/health"

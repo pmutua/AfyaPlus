@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AfyaPlus Evidence Files</title>
+  <style>
+    :root { color-scheme: dark; --ink:#eefbf6; --muted:#9cb8ad; --panel:#102a25; --line:#245247; --mint:#54d6a2; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:radial-gradient(circle at 20% 0,#17483b 0,#071512 38%); color:var(--ink); font:15px/1.5 Inter,Segoe UI,sans-serif; }
+    main { width:min(900px,92vw); margin:0 auto; padding:52px 0 72px; }
+    header { margin-bottom:32px; }
+    h1 { margin:0; font-size:clamp(1.8rem,4vw,3rem); letter-spacing:-.05em; }
+    p { color:var(--muted); margin:.5rem 0 0; }
+    .eyebrow { color:var(--mint); text-transform:uppercase; letter-spacing:.18em; font-size:.75rem; font-weight:700; }
+    section { background:linear-gradient(145deg,rgba(16,42,37,.96),rgba(8,27,23,.96)); border:1px solid var(--line); border-radius:18px; padding:24px; box-shadow:0 24px 70px #0006; overflow:auto; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:12px 10px; text-align:left; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; }
+    a { color:var(--mint); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .back { display:inline-block; margin-bottom:18px; color:var(--muted); }
+    footer { margin-top:22px; color:var(--muted); font-size:.8rem; }
+  </style>
+</head>
+<body>
+<main>
+  <a class="back" href="/">&larr; Back to dashboard</a>
+  <header>
+    <div class="eyebrow">Source evidence</div>
+    <h1>Evidence Files</h1>
+    <p>The raw CSV/HTML/PDF artifacts behind every panel and every claim in
+      the executive summary. Zero supported PII; safe to share.</p>
+  </header>
+  <section>
+    <table>
+      <thead><tr><th>File</th><th>Size</th></tr></thead>
+      <tbody>
+      {% for entry in artifacts %}
+        <tr>
+          <td><a href="/artifacts/{{ entry.relative_path }}">{{ entry.relative_path }}</a></td>
+          <td>{{ "%.1f"|format(entry.size_bytes / 1024) }} KB</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <footer>Files not yet generated on this deployment are omitted, not shown broken.</footer>
+</main>
+</body>
+</html>

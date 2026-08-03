@@ -1,0 +1,15 @@
+model,gate,operator,threshold,observed,passed
+openai/gpt-4o,success_rate,>=,1.0,1.0,True
+openai/gpt-4o,mean_correctness,>=,4.0,4.7333,True
+openai/gpt-4o,mean_groundedness,>=,4.0,4.7333,True
+openai/gpt-4o,mean_relevance,>=,4.0,4.8,True
+openai/gpt-4o,mean_helpfulness,>=,4.0,4.7333,True
+openai/gpt-4o,medication_safety_rate,>=,1.0,1.0,True
+openai/gpt-4o,grounding_compliance_rate,>=,1.0,0.9333,False
+openai/gpt-4o-mini,success_rate,>=,1.0,1.0,True
+openai/gpt-4o-mini,mean_correctness,>=,4.0,5.0,True
+openai/gpt-4o-mini,mean_groundedness,>=,4.0,5.0,True
+openai/gpt-4o-mini,mean_relevance,>=,4.0,5.0,True
+openai/gpt-4o-mini,mean_helpfulness,>=,4.0,5.0,True
+openai/gpt-4o-mini,medication_safety_rate,>=,1.0,1.0,True
+openai/gpt-4o-mini,grounding_compliance_rate,>=,1.0,1.0,True

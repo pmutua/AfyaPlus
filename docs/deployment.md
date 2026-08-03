@@ -111,7 +111,7 @@ one passes retrieval tests.
 
 ## Railway Production Deployment
 
-The repository's `railway.json` selects Railpack, starts one Uvicorn worker on
+The repository's `app/railway.json` selects Railpack, starts one Uvicorn worker on
 Railway's injected `PORT`, gates activation on `/health`, and restarts failed
 processes up to five times. `.python-version` keeps Railway and CI on Python
 3.12, avoiding accidental runtime changes when Railpack defaults advance.
@@ -138,7 +138,7 @@ key set. Configure these non-secret values in Railway:
 
 Set `OLLAMA_CLOUD_MODEL`, `OLLAMA_CLOUD_API_KEY`, `QDRANT_URL`, and
 `QDRANT_API_KEY` as Railway variables from an approved secret source. Never
-copy their values into GitHub workflow files, `railway.json`, documentation,
+copy their values into GitHub workflow files, `app/railway.json`, documentation,
 or logs.
 
 The effective start command is:
@@ -170,30 +170,44 @@ service. Chainlit limits are per generated browser session. Process restarts
 clear all allowances, and replicas would maintain separate counters. Use a
 shared Redis-backed limiter before scaling beyond one process.
 
-Docker remains deliberately deferred for this capstone. Do not add Dockerfile
-or Compose configuration as part of deployment documentation maintenance.
+Docker is no longer deferred: SPEC-7.4 added `app/Dockerfile`,
+`dashboard/Dockerfile`, and a root `docker-compose.yml` for local use, plus
+three additional Railway services (`dashboard`, `prometheus`, `grafana`)
+running the same images in production. See
+[railway-deployment.md](railway-deployment.md) for the complete four-service
+setup, environment variables, and troubleshooting — this document covers
+only the chat API's own Qdrant/Ollama Cloud configuration above.
 
 ## CI/CD Pipeline
 
-`.github/workflows/ci.yml` runs for every pull request and for pushes to
-`main` and `feat-rag-agent-system`. It installs `requirements.txt` before
-running `pip check`, the complete pytest suite, compileall, and the diff check.
-The workflow has read-only repository permissions and cancels superseded runs
-on the same branch.
+`.github/workflows/ci.yml` runs for every pull request and for direct pushes
+to `main`, `feat-rag-agent-system`, and `feat-observability-dashboard`
+(`feat-rag-agent-system` is the prior, already-merged capstone branch, kept
+in the list rather than removed since it's harmless). In practice, every
+commit on the active `feat-observability-dashboard` branch has run CI via
+the `pull_request` trigger regardless, since PR #49 has been open the whole
+time and a push to a branch with an open PR fires a `synchronize` event. It
+installs `requirements.txt` before
+running `pip check`, the complete pytest suite, compileall (now covering
+`app scripts tests triage triage_cli.py evaluation drift cost dashboard`),
+and the diff check. The workflow has read-only repository permissions and
+cancels superseded runs on the same branch.
 
-Railway owns the deployment half of the pipeline:
+**Current state, stated plainly**: no Railway service has a GitHub source
+connected. Every deploy — for all four services — is a manual `railway up`
+(see [railway-deployment.md](railway-deployment.md)), so a passing CI run is
+not currently a deploy gate. This is a known gap, not an oversight; closing
+it would mean:
 
-1. Connect the production service to the approved GitHub branch.
-2. Enable **Wait for CI** in the service's GitHub deployment settings.
+1. Connect each production service to its approved GitHub branch.
+2. Enable **Wait for CI** in each service's GitHub deployment settings.
 3. Keep automatic deployments enabled only for that branch.
-4. Require the GitHub `Verify Python application` check before merging to the
-   protected production branch.
+4. Require the GitHub `Verify Python application` check before merging to
+   the protected production branch.
 
-With Wait for CI enabled, Railway holds a deployment while GitHub Actions runs,
-skips it when any workflow fails, and proceeds only after all checks succeed.
-This avoids placing a Railway API token in GitHub. Branch protection remains a
-GitHub repository setting and should be enabled when the feature branch is
-approved for merge.
+With Wait for CI enabled, Railway would hold a deployment while GitHub
+Actions runs, skip it when any workflow fails, and proceed only after all
+checks succeed — avoiding a Railway API token in GitHub. Not yet done.
 
 ## Rollback
 
